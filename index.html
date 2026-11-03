@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Cost-benefit analýza soukromí a anonymity. Pro nováčky i profesionály. Funguje offline, nic neodesílá.">
+<meta name="theme-color" content="#141A17">
+<title>Bilance soukromí</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+/* Layout: horní lišta, pod ní buď průvodce (krokový sloupec) nebo expertní dvousloupec (editace | výsledek) */
+:root{
+  --bg:#F2F3EF; --surface:#FFFFFF; --soft:#E7EAE3; --ink:#141A17; --muted:#56605A; --line:#D5D9D1;
+  --accent:#2445C2; --accent-ink:#FFFFFF; --pro:#1C7346; --con:#AE372B; --warn:#8A5A00;
+  --pro-soft:#E1F0E7; --con-soft:#F6E3E0; --warn-soft:#F5ECD7; --accent-soft:#E3E8FA;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  --r:10px; color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1312; --surface:#171C1A; --soft:#202624; --ink:#E5EAE6; --muted:#9AA49E; --line:#2D3532;
+    --accent:#8DA0FF; --accent-ink:#0F1312; --pro:#5CC58D; --con:#F07D70; --warn:#E2B04C;
+    --pro-soft:#18302A; --con-soft:#3A2220; --warn-soft:#33291A; --accent-soft:#1E2544; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1312; --surface:#171C1A; --soft:#202624; --ink:#E5EAE6; --muted:#9AA49E; --line:#2D3532;
+  --accent:#8DA0FF; --accent-ink:#0F1312; --pro:#5CC58D; --con:#F07D70; --warn:#E2B04C;
+  --pro-soft:#18302A; --con-soft:#3A2220; --warn-soft:#33291A; --accent-soft:#1E2544; color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--font);-webkit-text-size-adjust:100%}
+h1,h2,h3{line-height:1.2;text-wrap:balance;margin:0}
+h2{font-size:1.5rem;letter-spacing:-.01em}
+h3{font-size:1.06rem}
+p{margin:0}
+a{color:var(--accent)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:.875rem}
+.lead{color:var(--muted);max-width:65ch}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.top-in{max-width:1240px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.brand{display:flex;gap:10px;align-items:center;font-weight:700;letter-spacing:-.01em}
+.brand svg{flex:none}
+.cur{color:var(--muted);font-size:.9rem;max-width:32ch;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:2px;background:var(--soft)}
+.seg button{border:0;background:transparent;padding:5px 12px;border-radius:999px;cursor:pointer;font-size:.9rem;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12);font-weight:600}
+.btn{border:1px solid var(--line);background:var(--surface);padding:7px 12px;border-radius:8px;cursor:pointer;font-size:.92rem;line-height:1.2}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.danger{color:var(--con)}
+.btn.sm{padding:4px 9px;font-size:.85rem}
+.iconbtn{border:1px solid transparent;background:transparent;border-radius:6px;cursor:pointer;width:30px;height:30px;display:inline-grid;place-items:center;color:var(--muted);flex:none}
+.iconbtn:hover{background:var(--soft);color:var(--ink)}
+
+main{max-width:1240px;margin:0 auto;padding:20px 16px 80px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.privacy-note{display:flex;gap:8px;align-items:center;font-size:.85rem;color:var(--muted)}
+
+/* guide */
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;counter-reset:s}
+.steps button{display:flex;gap:8px;align-items:center;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px 5px 6px;cursor:pointer;font-size:.88rem;color:var(--muted)}
+.steps button .n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--soft);font-size:.78rem;font-weight:700;color:var(--muted)}
+.steps button[aria-current="step"]{border-color:var(--accent);color:var(--ink);font-weight:600}
+.steps button[aria-current="step"] .n{background:var(--accent);color:var(--accent-ink)}
+.steps button.done .n{background:var(--pro-soft);color:var(--pro)}
+.guide{max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.navbar{display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.explain{background:var(--accent-soft);border-radius:var(--r);padding:14px 16px;font-size:.95rem;max-width:none}
+.explain strong{font-weight:650}
+
+.tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.tpl{display:flex;flex-direction:column;gap:4px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:12px 14px;cursor:pointer}
+.tpl:hover{border-color:var(--accent)}
+.tpl b{font-weight:650}
+.tpl span{font-size:.86rem;color:var(--muted)}
+.tpl .tag{align-self:flex-start;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--accent)}
+
+label.f{display:block;font-weight:600;font-size:.92rem;margin-bottom:4px}
+input[type=text],input[type=number],select,textarea{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 9px;min-width:0}
+input[type=text],textarea{width:100%}
+textarea{min-height:90px;resize:vertical}
+.choice{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.choice label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;cursor:pointer;background:var(--surface)}
+.choice label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.choice input{margin-top:4px}
+.choice small{display:block;color:var(--muted)}
+
+.assets{display:grid;gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.asset{display:grid;grid-template-columns:minmax(180px,1fr) auto;gap:10px;align-items:center;padding:9px 12px;border-top:1px solid var(--line);background:var(--surface)}
+.asset:first-child{border-top:0}
+.asset small{display:block;color:var(--muted);font-size:.8rem}
+.lvl{display:inline-flex;gap:3px;flex-wrap:wrap}
+.lvl button{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:3px 8px;font-size:.8rem;cursor:pointer;color:var(--muted)}
+.lvl button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+@media (max-width:620px){.asset{grid-template-columns:1fr}}
+
+.checks{display:grid;gap:6px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.checks label{display:flex;gap:8px;align-items:flex-start;padding:6px 0;cursor:pointer}
+.checks input{margin-top:5px}
+
+/* options */
+.opt{display:flex;gap:8px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.opt .badge{flex:none}
+.badge{font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:var(--soft);color:var(--muted);white-space:nowrap}
+.badge.sq{background:var(--soft)}
+.badge.ch{background:var(--accent-soft);color:var(--accent)}
+
+/* quadrants */
+.quad{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:760px){.quad{grid-template-columns:1fr}}
+.qbox{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);display:flex;flex-direction:column;min-width:0}
+.qhead{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:baseline;justify-content:space-between}
+.qhead h3{font-size:.98rem}
+.qhead .sum{font-family:var(--mono);font-size:.85rem;font-variant-numeric:tabular-nums}
+.qbox.cost{border-top:3px solid var(--con)}
+.qbox.benefit{border-top:3px solid var(--pro)}
+.qbox.cost .sum{color:var(--con)}
+.qbox.benefit .sum{color:var(--pro)}
+.qhint{padding:8px 14px 0;font-size:.84rem;color:var(--muted)}
+.qbody{padding:8px 10px 12px;display:flex;flex-direction:column;gap:6px}
+.optgroup{display:flex;flex-direction:column;gap:10px}
+.optgroup > h3{display:flex;gap:8px;align-items:center}
+
+.item{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px;border-radius:8px;background:var(--soft)}
+.item .t{flex:1 1 220px}
+.item select{padding:5px 6px;font-size:.85rem}
+.item .adv{display:none;flex-basis:100%;gap:6px;flex-wrap:wrap;align-items:center;font-size:.85rem}
+.item.open .adv{display:flex}
+.item .adv .note{flex:1 1 180px}
+.item input.p{width:64px}
+.addrow{display:flex;gap:6px}
+.addrow input{flex:1}
+.chips{display:flex;flex-wrap:wrap;gap:5px;padding:2px 2px 0}
+.chip{border:1px dashed var(--line);background:transparent;border-radius:999px;padding:3px 9px;font-size:.8rem;cursor:pointer;color:var(--muted)}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.empty{font-size:.85rem;color:var(--muted);padding:4px 6px}
+
+.meter{display:flex;gap:10px;align-items:center;font-size:.86rem;flex-wrap:wrap}
+.meter .track{flex:1 1 200px;height:10px;border-radius:999px;background:var(--con-soft);overflow:hidden;min-width:120px}
+.meter .fill{height:100%;background:var(--pro)}
+
+/* bias */
+.bias{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;background:var(--surface);display:flex;flex-direction:column;gap:8px}
+.bias .ans{display:flex;gap:4px}
+.bias .ans button{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:4px 12px;cursor:pointer;font-size:.86rem}
+.bias .ans button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.bias .nudge{font-size:.88rem;background:var(--warn-soft);border-radius:8px;padding:8px 10px}
+
+/* results */
+.results{display:flex;flex-direction:column;gap:14px}
+.verdict{border-radius:var(--r);padding:14px 16px;border:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;gap:6px}
+.verdict .v{font-size:1.3rem;font-weight:700;letter-spacing:-.01em}
+.verdict.good{border-left:5px solid var(--pro)}
+.verdict.bad{border-left:5px solid var(--con)}
+.verdict.mid{border-left:5px solid var(--warn)}
+.pill{display:inline-block;font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:999px}
+.pill.good{background:var(--pro-soft);color:var(--pro)}
+.pill.bad{background:var(--con-soft);color:var(--con)}
+.pill.mid{background:var(--warn-soft);color:var(--warn)}
+.bars{display:flex;flex-direction:column;gap:12px}
+.bar-row{display:flex;flex-direction:column;gap:4px}
+.bar{display:grid;grid-template-columns:1fr 8.5em;gap:8px;align-items:center}
+.bar > span{display:block;height:14px;border-radius:3px;grid-column:1;grid-row:1}
+.bar::before{content:"";grid-column:1;grid-row:1;height:14px;border-radius:3px;background:var(--soft)}
+.bar .pro{background:var(--pro)} .bar .con{background:var(--con)}
+.bar em{font-style:normal;font-size:.82rem;color:var(--muted)}
+td.optc{min-width:14ch}
+.insights{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.insights li{padding:8px 10px 8px 12px;border-radius:8px;font-size:.9rem;border-left:3px solid var(--line);background:var(--soft)}
+.insights li.good{border-left-color:var(--pro);background:var(--pro-soft)}
+.insights li.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.insights li.bad{border-left-color:var(--con);background:var(--con-soft)}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:.8rem}
+td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tablewrap{overflow-x:auto}
+.drivers{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:560px){.drivers{grid-template-columns:1fr}}
+.drivers ol{margin:4px 0 0;padding-left:20px;font-size:.88rem}
+details{border:1px solid var(--line);border-radius:var(--r);padding:8px 12px;background:var(--surface)}
+details summary{cursor:pointer;font-weight:600;font-size:.92rem}
+details[open] summary{margin-bottom:8px}
+
+/* expert */
+.expert-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(320px,1fr);gap:18px;align-items:start}
+.expert-grid > aside{position:sticky;top:70px;max-height:calc(100vh - 86px);overflow:auto;display:flex;flex-direction:column;gap:12px}
+@media (max-width:980px){.expert-grid{grid-template-columns:1fr}.expert-grid > aside{position:static;max-height:none}}
+.expert .item .adv{display:flex}
+.expert .item .more{display:none}
+.sec{display:flex;flex-direction:column;gap:12px}
+.sec + .sec{margin-top:18px}
+.sec > h2{font-size:1.15rem;display:flex;gap:8px;align-items:baseline}
+.sec > h2 .k{font-family:var(--mono);font-size:.8rem;color:var(--muted);font-weight:500}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:620px){.grid2{grid-template-columns:1fr}}
+.weights{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.weights label{font-size:.88rem;display:flex;flex-direction:column;gap:4px}
+
+/* glossary links */
+.g{border:0;background:none;padding:0;color:inherit;border-bottom:1px dotted var(--accent);cursor:help;font:inherit}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(10,14,12,.5);display:none;place-items:center;padding:16px;z-index:50}
+.modal.on{display:grid}
+.modal .box{background:var(--surface);border-radius:12px;max-width:640px;width:100%;max-height:calc(100% - 32px);overflow:auto;padding:20px;display:flex;flex-direction:column;gap:12px;border:1px solid var(--line)}
+.modal .box textarea{min-height:220px;font-family:var(--mono);font-size:.8rem}
+.alist{display:flex;flex-direction:column;gap:6px}
+.alist .a{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.alist .a.cur{border-color:var(--accent)}
+.alist .a .grow{flex:1;min-width:0}
+.alist .a b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .2s;z-index:60}
+.toast.on{opacity:1}
+.lvl-h{display:flex;gap:10px;align-items:baseline;margin-top:6px}
+.lvl-h h3{font-size:.95rem}
+.lvl-h span{font-size:.82rem;color:var(--muted)}
+.tpl.rec{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.tpl .recb{align-self:flex-start;font-size:.7rem;font-weight:700;color:var(--accent-ink);background:var(--accent);border-radius:999px;padding:1px 7px}
+.why{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.why label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;cursor:pointer;background:var(--surface)}
+.why label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.why input{margin-top:4px}
+.why small{display:block;color:var(--muted)}
+.cap{font-family:var(--mono);font-size:.72rem;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-left:4px;white-space:nowrap}
+.tp{display:flex;gap:6px;flex-wrap:wrap}
+.tp button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 12px;cursor:pointer;text-align:left;flex:1 1 180px}
+.tp button small{display:block;color:var(--muted);font-size:.8rem}
+.tp button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.safety{border:2px solid var(--con);background:var(--con-soft);border-radius:var(--r);padding:12px 14px}
+.src{font-size:.8rem;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{
+  .top,.steps,.navbar,.no-print,.addrow,.chips,.iconbtn{display:none!important}
+  body{background:#fff;color:#000}
+  .expert-grid{grid-template-columns:1fr}
+  .expert-grid > aside{position:static;max-height:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="currentColor"/><path d="M14 22h36" stroke="var(--bg)" stroke-width="4" stroke-linecap="round"/><path d="M32 14v36" stroke="var(--bg)" stroke-width="4" stroke-linecap="round"/><rect x="12" y="30" width="12" height="18" rx="2" fill="var(--pro)"/><rect x="40" y="38" width="12" height="10" rx="2" fill="var(--con)"/></svg>
+      <span id="app-name">Bilance soukromí</span>
+    </div>
+    <span class="cur" id="cur-title"></span>
+    <span class="spacer"></span>
+    <div class="seg" role="group" aria-label="Jazyk / Language">
+      <button type="button" data-act="lang" data-v="cs" id="l-cs">CZ</button>
+      <button type="button" data-act="lang" data-v="en" id="l-en">EN</button>
+    </div>
+    <div class="seg" role="group" aria-label="Režim">
+      <button type="button" data-act="mode" data-v="guide" id="m-guide"></button>
+      <button type="button" data-act="mode" data-v="expert" id="m-expert"></button>
+    </div>
+    <button class="btn" type="button" data-act="list" id="b-list"></button>
+    <button class="btn ghost" type="button" data-act="install" id="install-btn" hidden></button>
+    <button class="iconbtn" type="button" data-act="about" aria-label="O aplikaci a slovníček" title="O aplikaci a slovníček">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4.5"/><circle cx="12" cy="17.5" r=".6" fill="currentColor"/></svg>
+    </button>
+  </div>
+</header>
+<main id="main"></main>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="box" id="modal-box"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+/* ================= I18N ================= */
+let LANG = 'cs';
+const tr = (cs, en) => LANG === 'cs' ? cs : en;
+const L = v => Array.isArray(v) ? (LANG === 'cs' ? v[0] : v[1]) : v;
+
+/* ================= DATA ================= */
+const MAG = [['',''],['drobnost','trivial'],['malé','small'],['střední','medium'],['velké','large'],['zásadní','critical']];
+const MAG_HINT = ['1 drobnost (pár minut, pár korun) · 2 malé · 3 střední (dny práce, stovky Kč, citelné nepohodlí) · 4 velké · 5 zásadní (bezpečí, zdraví, svoboda, velké peníze)',
+                  '1 trivial (minutes, pocket change) · 2 small · 3 medium (days of work, real money, noticeable hassle) · 4 large · 5 critical (safety, health, freedom, serious money)'];
+const PROB = [[100,['jistě','certain']],[70,['pravděpodobně','likely']],[40,['možná','maybe']],[15,['spíš ne','unlikely']],[5,['vzácně','rare']]];
+const LVL = [['je mi to jedno','don’t care'],['trochu','a little'],['středně','medium'],['hodně','a lot'],['zásadně','critical']];
+const REV = {
+  rotate:['vratné (lze vyměnit)','reversible (can rotate)'],
+  aging:['stárne (nejde smazat, časem ztrácí cenu)','ages (can’t delete, loses value)'],
+  perm:['trvalé (biometrie, genom, tvář)','permanent (biometrics, DNA, face)']
+};
+
+const ASSETS = [
+  ['location',['Poloha a bydliště','Location and home'],['kde jsem teď, kde bydlím, kam jezdím','where I am, where I live, where I go']],
+  ['comms',['Komunikace','Communications'],['s kým, kdy a co si píšu nebo volám','who I talk to, when, and what']],
+  ['finance',['Finance a majetek','Money and assets'],['kolik mám, co kupuji, komu posílám','what I own, buy, and send']],
+  ['identity',['Skutečná identita','Real identity'],['jméno, doklady, telefonní číslo, e-mail','name, ID documents, phone number, email']],
+  ['apps',['Zařízení a aplikace','Devices and apps'],['co mám nainstalované a jak to používám','what I run and how I use it']],
+  ['browsing',['Chování na internetu','Online behaviour'],['co čtu, hledám, sleduji','what I read, search, watch']],
+  ['social',['Sociální okruh','Social graph'],['s kým se stýkám','who I spend time with']],
+  ['beliefs',['Názory a víra','Beliefs'],['politika, náboženství, přesvědčení','politics, religion, convictions']],
+  ['intimate',['Vztahy a orientace','Relationships and orientation'],['partnerství, sexuální orientace','partners, sexual orientation']],
+  ['health',['Zdraví','Health'],['nemoci, léky, těhotenství, psychika','conditions, medication, pregnancy, mental health']],
+  ['biometrics',['Biometrie a vzhled','Biometrics and face'],['obličej, otisky, hlas, DNA (nejde vyměnit)','face, fingerprints, voice, DNA (cannot be rotated)']],
+  ['authorship',['Autorství','Authorship'],['co jsem vytvořil/a, napsal/a, naprogramoval/a','what I created, wrote, built']]
+];
+const assetLabel = k => { const a = ASSETS.find(x=>x[0]===k); return a ? L(a[1]) : ''; };
+
+// cap: 1 opportunistic, 2 commercial/organised, 3 targeted professional, 4 state-level; t: targets you specifically?
+const ADV = [
+  ['local',1,false,['Lidé na stejné síti','People on the same network'],['veřejná Wi-Fi, poskytovatel internetu, správce sítě','public Wi-Fi, ISP, network admin']],
+  ['ads',2,false,['Reklamní firmy a datoví makléři','Ad tech and data brokers'],['skládají a prodávají profil, nehledají konkrétně vás','build and sell profiles, not looking for you in particular']],
+  ['platforms',2,false,['Platformy a výrobci','Platforms and vendors'],['Google, Apple, Meta, banky; mohou účet zrušit nebo aplikaci zakázat','Google, Apple, Meta, banks; can close accounts or ban apps']],
+  ['people',1,true,['Lidé kolem','People around you'],['zaměstnavatel, rodina, sousedé, kolegové','employer, family, neighbours, colleagues']],
+  ['stalker',2,true,['Konkrétní člověk, který vás hledá','A specific person looking for you'],['stalker, násilný ex, vyděrač, naštvaný zákazník','stalker, abusive ex, extortionist, angry customer']],
+  ['criminals',2,false,['Zločinci','Criminals'],['úniky databází, podvody, krádež, útok kvůli majetku','breaches, fraud, theft, attacks over wealth']],
+  ['investigator',3,true,['Profesionál, který jde po vás','A professional targeting you'],['soukromý detektiv, firma, novinář, právník protistrany','private investigator, company, journalist, opposing counsel']],
+  ['state',4,false,['Stát a úřady dnes','The state today'],['daně, dohled, regulace, retence dat','taxes, surveillance, regulation, data retention']],
+  ['future',4,false,['Budoucí moc','Future power'],['co dnes nevadí, může zítra vadit podle nového výkladu','what is fine today may not be under tomorrow’s rules']]
+];
+const CAP = [null,['příležitostný','opportunistic'],['organizovaný','organised'],['cílený profesionál','targeted pro'],['státní','state-level']];
+
+const WHY = [
+  ['digital',['Digitální soukromí','Digital privacy'],['telefon, počítač, účty, prohlížení','phone, computer, accounts, browsing'],['adblock','passwords','emailalias','messenger','graphene','vpn']],
+  ['tracking',['Sledování pohybu a nákupů','Tracking of movements and purchases'],['poloha, platby, auto, každodenní stopa','location, payments, car, everyday trail'],['phonehome','graphene','cash','cards','homefw','location']],
+  ['safety',['Fyzické bezpečí','Physical safety'],['někdo konkrétní mě hledá nebo by mohl','someone specific is or may be looking for me'],['location','phonehome','delivery','voip','gdpr','alias']],
+  ['assets',['Majetek','Assets'],['dům, auto, úspory, podnikání','home, car, savings, business'],['property','cash','cards','delivery','gdpr']],
+  ['curious',['Jen mě to zajímá','Just curious'],['chci začít něčím jednoduchým','I want to start with something simple'],['adblock','passwords','location','emailalias']]
+];
+
+const BIASES = [
+  {k:'statusquo', good:'yes', q:['Hledal/a jsem aktivně přínosy změny, i když se mi do ní nechce?','Did I actively look for benefits of changing, even though I don’t feel like it?'],
+   nudge:['Když se nám do něčeho nechce, vidíme hlavně argumenty proti. Dopište aspoň dva přínosy změny. Někdy pomůže přínos vytvořit: třeba koupit zařízení, které umí něco navíc, a přechod brát jako vedlejší efekt.',
+          'When we don’t want to do something, we mostly see the arguments against. Add at least two benefits of changing. Sometimes it helps to create a benefit, e.g. buy a device that does something extra and treat the switch as a side effect.']},
+  {k:'novelty', good:'yes', q:['Započítal/a jsem i průběžnou údržbu, ne jen to, jak zajímavé je to nastavovat?','Did I count ongoing maintenance, not just how fun the setup is?'],
+   nudge:['Ladění nastavení umí být zábava, která spolkne týdny. Přidejte do nákladů změny i údržbu a čas.','Tinkering can be fun that eats weeks. Add maintenance and time to the costs of changing.']},
+  {k:'ux', good:'yes', q:['Ověřil/a jsem si, že alternativa je opravdu tak nepohodlná, jak si myslím?','Did I check that the alternative is really as inconvenient as I assume?'],
+   nudge:['Představa, že soukromější řešení znamená horší pohodlí, dnes často neplatí. Vyzkoušejte alternativu pár dní nebo se zeptejte uživatele a upravte náklady.','The belief that more private means less convenient is often outdated. Try it for a few days or ask someone who uses it, then adjust costs.']},
+  {k:'sustain', good:'yes', q:['Udržím to i za rok, až mě to přestane bavit?','Will I still keep this up in a year, when it stops being exciting?'],
+   nudge:['Opatření, která vyžadují neustálou ostražitost, selžou ve chvíli, kdy ostražitost poleví. Upřednostněte to, co běží samo, nebo zvyšte náklad „disciplína“.','Measures that need constant vigilance fail when vigilance lapses. Prefer what runs by itself, or raise the cost of “discipline”.']},
+  {k:'weakest', good:'yes', q:['Ověřil/a jsem, že mě neprozradí jiná část života (sociální sítě, rodina, platba, jedno přihlášení pod skutečným jménem)?','Did I check that another part of my life won’t give me away (social media, family, a payment, one real-name login)?'],
+   nudge:['Silné technické opatření nepomůže, když slabý článek je jinde: fotka od příbuzného, platba kartou, jedna akce pod skutečným jménem vedle anonymního pobytu. Najděte nejslabší článek a začněte tam.',
+          'Strong tech doesn’t help if the weak link is elsewhere: a relative’s photo, a card payment, one real-name event next to an anonymous stay. Find the weakest link and start there.']},
+  {k:'standout', good:'no', q:['Budu po změně nápadnější než ostatní, a tedy snáz rozpoznatelný/á?','Will the change make me stand out and therefore easier to recognise?'],
+   nudge:['Kdo je vzácný, toho jde snáz poznat (fingerprinting). Někdy je lepší splynout s davem než mít exotické nastavení. Přidejte to jako náklad změny.','Rare setups are easy to recognise (fingerprinting). Blending in can beat an exotic configuration. Add it as a cost of changing.']},
+  {k:'future', good:'yes', q:['Počítám s tím, že data, která dnes nevadí, může zneužít budoucí moc nebo útočník?','Am I accounting for data that is harmless today being misused by a future power or attacker?'],
+   nudge:['Otázka nezní „mám dnes co skrývat?“, ale „mohl/a bych mít co skrývat podle jakéhokoli budoucího výkladu jakékoli budoucí moci?“ Uniklou databázi nikdo nesmaže.','The question isn’t “do I have something to hide today?” but “could I under any future interpretation by any future power?” Nobody can delete a leaked database.']},
+  {k:'inference', good:'yes', q:['Podíval/a jsem se na to očima sledovacího systému? Co se dá dovodit, i když to přímo neříkám?','Did I look at it through the surveillance system’s eyes? What can be inferred even if I never say it?'],
+   nudge:['Sledovací systém nepotřebuje vidět každý krok. Mezikroky dopočítá z metadat, polohy a z chování lidí podobných vám.','A surveillance system doesn’t need every step. It infers the gaps from metadata, location and people similar to you.']},
+  {k:'middle', good:'yes', q:['Zvážil/a jsem mezicestu? Jen pro jednu činnost, v odděleném profilu, s omezenými oprávněními.','Did I consider a middle path? One activity only, a separate profile, restricted permissions.'],
+   nudge:['Nemusí to být všechno, nebo nic. V kroku Možnosti přidejte mezicestu a porovnejte ji.','It doesn’t have to be all or nothing. Add a middle path in Options and compare.']},
+  {k:'weird', good:'no', q:['Je hlavním důvodem, proč to nedělám, obava, že budu vypadat divně?','Is the main reason I don’t do it that I’d look weird?'],
+   nudge:['Ostatní si toho obvykle všimnou mnohem méně, než čekáme. Ohodnoťte to poctivě, možná je to menší, než se zdá.','People notice far less than we expect. Rate it honestly; it may be smaller than it feels.']},
+  {k:'reassess', good:'yes', q:['Vím, kdy analýzu zopakuji (nová práce, vztah, stěhování, veřejné vystupování, incident)?','Do I know when I will redo this (new job, relationship, move, public profile, incident)?'],
+   nudge:['Model hrozeb není neměnný. Zapište si do poznámek, co by vás mělo přimět analýzu zopakovat.','Threat models change. Note what should trigger a re-run of this analysis.']}
+];
+
+const TP = [
+  [1.0,['Hlavně teď','Mostly now'],['pohodlí dnes je pro mě důležitější','convenience today matters more']],
+  [1.5,['Vyváženě','Balanced'],['výchozí nastavení','default']],
+  [2.5,['Dlouhodobě','Long term'],['přínosy, které se sčítají roky, mají velkou váhu','benefits that compound for years weigh a lot']]
+];
+
+const INSP = {
+  chCost: [[['Musím se naučit něco nového','I have to learn something new'],2,'once'],[['Čas na přechod a nastavení','Time to switch and set up'],3,'once'],[['Peníze navíc (hardware, předplatné)','Extra money (hardware, subscription)'],2,'once'],[['Nekompatibilita s rodinou a okolím','Incompatibility with family and friends'],2],[['Některé běžné služby nebudou fungovat','Some mainstream services won’t work'],2],[['Sociální tření: budu „ten divný“','Social friction: I’ll be “the weird one”'],1],[['Průběžná údržba a disciplína','Ongoing maintenance and discipline'],2],[['Budu nápadnější (snazší fingerprinting)','I’ll stand out (easier fingerprinting)'],2],[['Riziko, že se zamknu (ztráta klíčů, záloh)','Risk of locking myself out (lost keys, backups)'],3,'ongoing','rotate',10]],
+  chBen: [[['Větší kontrola nad svými daty','More control over my data'],3],[['Svoboda instalovat a používat, co chci','Freedom to install and use what I want'],3],[['Odolnost vůči cenzuře a zrušení účtu','Resistance to censorship and account bans'],2],[['Menší digitální stopa','Smaller digital footprint'],3],[['Ochrana před budoucím zneužitím dat','Protection against future misuse'],3],[['Útočník mě nevidí už ve fázi pozorování','Adversary can’t observe me in the first place'],3],[['Klid a pocit bezpečí','Peace of mind'],2],[['Svobody se časem sčítají','Freedoms compound over time'],2]],
+  sqCost: [[['Sběr dat a profilování','Data collection and profiling'],3,'ongoing','aging'],[['Závislost na jednom dodavateli','Vendor lock-in'],2],[['KYC a ověřování totožnosti všude','KYC and ID checks everywhere'],2,'ongoing','aging'],[['Riziko, že službu nebo aplikaci někdo zakáže','Risk that a service or app gets banned'],2,'ongoing','rotate',30],[['Únik databáze (data už nejdou vzít zpět)','Database breach (data can’t be taken back)'],3,'ongoing','aging',30],[['Únik biometrie nebo fotek obličeje','Leak of biometrics or face photos'],4,'ongoing','perm',15],[['Ohrožení majetku nebo bezpečí','Threat to property or safety'],5,'ongoing','aging',5],[['Autocenzura: chovám se jinak, protože mě někdo vidí','Self-censorship: I act differently because I’m watched'],2],[['Skryté náklady (manipulativní reklama, ceny na míru)','Hidden costs (manipulative ads, personalised prices)'],2]],
+  sqBen: [[['Nemusím se nic učit','Nothing to learn'],2,'once'],[['Kompatibilita s rodinou a okolím','Compatible with family and friends'],2],[['Vyladěný systém, na který jsem zvyklý/á','A tuned setup I’m used to'],2],[['Žádné krátkodobé komplikace','No short-term hassle'],2,'once'],[['Nevyčnívám z davu','I blend in'],1],[['Žádné peníze navíc','No extra money'],2,'once']]
+};
+
+const GLOSS = {
+  soukromi:[['Soukromí','Privacy'],['Schopnost sám/sama rozhodovat, co komu odhalím (výběrové sdílení). Neznamená skrývat něco špatného: i oblečení je forma soukromí. Chrání podmínky pro svobodné rozhodování, vyjednávání a postupné budování důvěry.','The ability to choose what you reveal and to whom (selective disclosure). It is not about hiding wrongdoing: clothing is privacy too. It protects free choice, negotiation and gradually built trust.']],
+  anonymita:[['Anonymita','Anonymity'],['Činnost nelze spojit s vaší skutečnou identitou. Reálná je jen pro konkrétní projekty nebo činnosti a vyžaduje přísné oddělení: jiný prohlížeč, e-mail, IP adresu, platby, kontakty. Kdo chce být anonymní ve všem, obvykle selže a je pak nápadnější.','An activity cannot be linked to your real identity. Realistic only for specific projects or activities, with strict separation: browser, email, IP, payments, contacts. Trying to be anonymous in everything usually fails and makes you stand out.']],
+  pseudonym:[['Pseudonym','Pseudonym'],['Stálé jméno, které není vaše skutečné. Umožňuje budovat reputaci bez vazby na doklady. Obchodní značka je v podstatě pseudonym.','A persistent name that isn’t your legal one. Lets you build reputation without tying it to your ID. A brand is essentially a pseudonym.']],
+  panoptikum:[['Efekt panoptika','Panopticon effect'],['Když máme pocit, že nás někdo pozoruje, rozhodujeme se podle toho, jak to bude vypadat, a ne podle toho, co chceme. Vede k autocenzuře.','When we feel watched we choose by how it looks rather than what we want. Leads to self-censorship.']],
+  fingerprinting:[['Fingerprinting','Fingerprinting'],['Rozpoznání zařízení nebo člověka podle souhrnu drobností: prohlížeč, rozlišení, písma, nastavení, chování. Čím exotičtější nastavení, tím snazší je vás poznat.','Recognising a device or person from many small traits: browser, screen, fonts, settings, behaviour. The more exotic the setup, the easier you are to spot.']],
+  metadata:[['Metadata','Metadata'],['Data o datech: kdo s kým, kdy, odkud a jak často. Často prozradí víc než obsah.','Data about data: who, with whom, when, from where, how often. Often reveals more than content.']],
+  inference:[['Odvozování','Inference'],['Sledovací systémy dopočítají zbytek z několika bodů a z chování podobných lidí.','Surveillance systems infer the rest from a few data points and from similar people.']],
+  threat:[['Model hrozeb','Threat model'],['Co chráním, před kým, jaké má ten protivník schopnosti, jak pravděpodobné to je a jak zlé by to bylo. Stejné opatření může být proti jednomu protivníkovi zbytečně silné a proti jinému nebezpečně slabé.','What I protect, from whom, what that adversary can do, how likely and how bad. The same measure can be overkill against one adversary and dangerously weak against another.']],
+  ooda:[['Smyčka OODA','OODA loop'],['Pozoruj, zorientuj se, rozhodni, jednej. Každý protivník ji musí projít. Nejlevnější obrana je přerušit ji hned na začátku: když vás nevidí, zbytek se mu rozpadá.','Observe, Orient, Decide, Act. Every adversary runs it. The cheapest defence breaks it at Observe: if they can’t see you, the rest falls apart.']],
+  timepref:[['Časová preference','Time preference'],['Jak moc dáváte přednost pohodlí teď před přínosem později. Pohodlí sledovaných služeb je okamžité a jisté, náklady jsou budoucí a nejisté. Investice do soukromí se naopak vrací postupně a sčítá.','How much you prefer convenience now over benefit later. Surveilled convenience is immediate and certain, its costs future and uncertain. Privacy investments pay back gradually and compound.']],
+  irreversible:[['Nevratnost','Irreversibility'],['Tři stupně: vratné (heslo, karta, klíč jde vyměnit), stárnoucí (historie nákupů nejde smazat, ale časem ztrácí cenu), trvalé (obličej, otisky, hlas, DNA se vyměnit nedají nikdy).','Three levels: reversible (passwords, cards, keys can be rotated), ageing (purchase history can’t be deleted but decays), permanent (face, fingerprints, voice, DNA can never be rotated).']],
+  compart:[['Kompartmentalizace','Compartmentalisation'],['Oddělení identit a činností tak, aby únik jedné nic neprozradil o ostatních: jiné zařízení nebo profil, e-mail, číslo, platba, síť.','Separating identities and activities so a leak of one reveals nothing about the others: device or profile, email, number, payment, network.']],
+  vpn:[['VPN','VPN'],['Šifrovaný tunel k serveru poskytovatele VPN. Skryje provoz před místní sítí a poskytovatelem internetu a vaši IP před weby. Nechrání před službami, kam se přihlásíte, a důvěru jen přesouvá na poskytovatele VPN.','Encrypted tunnel to a VPN provider. Hides traffic from the local network and ISP and your IP from websites. Does not protect against services you log into, and shifts trust to the VPN provider.']],
+  dns:[['DNS','DNS'],['Telefonní seznam internetu: převádí jména webů na adresy. Kdo vidí vaše DNS dotazy, vidí, jaké weby navštěvujete. Filtrující DNS umí zablokovat sledovací a reklamní domény pro všechna zařízení.','The internet’s phone book. Whoever sees your DNS queries sees which sites you visit. Filtering DNS can block tracker and ad domains for every device.']],
+  voip:[['VoIP číslo','VoIP number'],['Telefonní číslo, které běží přes internet, ne přes SIM. Lze ho dávat obchodům a službám místo skutečného čísla a snadno ho vyměnit.','A phone number that runs over the internet instead of a SIM. Give it to shops and services instead of your real number and rotate it easily.']],
+  faraday:[['Faradayovo pouzdro','Faraday bag'],['Obal, který blokuje všechny signály telefonu. Užitečné, když si nevěříte, že vždy zapnete režim letadlo. Je dobré ho otestovat.','A pouch that blocks all phone signals. Useful if you don’t trust yourself to always enable airplane mode. Test it before relying on it.']],
+  broker:[['Datový makléř','Data broker'],['Firma, která skupuje a prodává osobní údaje (adresy, telefony, nákupy, polohu). Úřady i firmy od nich data kupují.','A company that buys and sells personal data (addresses, phones, purchases, location). Agencies and companies buy from them.']],
+  kyc:[['KYC','KYC'],['Know Your Customer: povinné ověření totožnosti u bank, burz a dalších služeb. Vytváří databáze, které mohou uniknout.','Mandatory identity verification at banks, exchanges and other services. Creates databases that can leak.']],
+  sideloading:[['Sideloading','Sideloading'],['Instalace aplikace mimo oficiální obchod (APK, Obtainium, Zapstore). Svoboda, ale odpovědnost za zdroj je na vás.','Installing apps outside the official store (APK, Obtainium, Zapstore). Freedom, but you vet the source.']],
+  push:[['Push notifikace','Push notifications'],['Upozornění, která aplikace pošle, i když neběží. Na Androidu je většinou doručuje Google přes Play Services.','Notifications delivered while the app isn’t running. On Android usually via Google Play Services.']],
+  lockin:[['Vendor lock-in','Vendor lock-in'],['Závislost na jednom dodavateli: odejít je drahé kvůli datům, nákupům, návykům a rodinnému sdílení.','Dependence on one vendor: leaving is expensive because of data, purchases, habits and family sharing.']],
+  compound:[['Skládání svobod','Compounding freedoms'],['Jednotlivá opatření se časem kombinují a celek je větší než součet částí.','Individual measures combine over time; the whole exceeds the sum of the parts.']],
+  status:[['Výchozí stav','Status quo'],['Možnost „nic neměnit“. I ta má náklady a přínosy. Kdo je nezapíše, porovnává změnu s nulou.','The “change nothing” option. It has costs and benefits too. Skipping them compares the change against zero.']]
+};
+
+/* ---------- templates ---------- */
+function C(t,m,p=100,d='ongoing',rev='rotate',asset=''){return {k:'cost',t,m,p,d,rev,asset}}
+function B(t,m,p=100,d='ongoing',rev='rotate',asset=''){return {k:'benefit',t,m,p,d,rev,asset}}
+const LEVELS = [null,[['Začněte tady','Start here'],['levné, velký přínos','cheap, high payoff']],[['Střední úsilí','Moderate effort'],['dny práce nebo pár stovek','days of work or some money']],[['Náročné','Demanding'],['týdny, nové návyky','weeks, new habits']],[['Extrém a specifické hrozby','Extreme and specific threats'],['jen když na to máte důvod','only with a concrete reason']]];
+const TEMPLATES = [
+ {key:'adblock', lvl:1, title:['Blokátor reklam v prohlížeči','Ad blocker in the browser'], lead:['Pár kliknutí a výrazně čistší web.','A few clicks for a much cleaner web.'],
+  goal:'privacy', scope:'global', assets:{browsing:2}, adv:['ads','platforms'], options:[
+  {name:['Nechat prohlížeč, jak je','Leave the browser as is'], sq:true, items:[
+    C(['Reklamní sítě skládají profil z mého prohlížení','Ad networks profile my browsing'],3,100,'ongoing','aging','browsing'),
+    C(['Pomalejší a nepřehledné stránky','Slower, cluttered pages'],2),
+    C(['Podvodné reklamy a škodlivý kód (malvertising)','Scam ads and malicious code (malvertising)'],3,15),
+    B(['Nic nemusím dělat','Nothing to do'],1,100,'once'),
+    B(['Weby, které žijí z reklam, ode mě dostanou peníze','Ad-funded sites get paid'],1)]},
+  {name:['Nainstalovat uBlock Origin (Firefox) nebo Brave','Install uBlock Origin (Firefox) or use Brave'], items:[
+    C(['Instalace: pár kliknutí','Install: a few clicks'],1,100,'once'),
+    C(['Občas nějaký web nefunguje a musím ho povolit','Occasionally a site breaks and needs allowing'],1,40),
+    B(['Méně sledovacích skriptů, menší profil','Fewer trackers, thinner profile'],3,100,'ongoing','rotate','browsing'),
+    B(['Rychlejší a čistší web','Faster, cleaner web'],3),
+    B(['Méně malvertisingu','Less malvertising'],2,40)]}]},
+ {key:'passwords', lvl:1, title:['Správce hesel a 2FA','Password manager and 2FA'], lead:['Únik jedné služby přestane otevírat ostatní.','One breach stops unlocking everything else.'],
+  goal:'privacy', scope:'global', assets:{identity:3,finance:3}, adv:['criminals','platforms'], options:[
+  {name:['Pamatovat si hesla, opakovat je','Remember and reuse passwords'], sq:true, items:[
+    C(['Jedno uniklé heslo otevře další účty (credential stuffing)','One leaked password opens other accounts (credential stuffing)'],4,40,'ongoing','aging','identity'),
+    C(['Převzetí e-mailu = reset všech ostatních účtů','Email takeover = reset of every other account'],5,10,'ongoing','aging','identity'),
+    C(['Slabá a podobná hesla','Weak, similar passwords'],2),
+    B(['Nic se neučím','Nothing to learn'],2,100,'once')]},
+  {name:['Bitwarden / KeePassXC + TOTP 2FA (Aegis, Ente Auth) nebo hardwarový klíč','Bitwarden / KeePassXC + TOTP 2FA (Aegis, Ente Auth) or a hardware key'], items:[
+    C(['Nastavení a přenos hesel (pár hodin)','Setup and migrating passwords (a few hours)'],2,100,'once'),
+    C(['Hlavní heslo a záloha jsou jediný bod selhání','Master password and backup are a single point of failure'],3,10),
+    C(['Ztráta telefonu bez záložních kódů 2FA mě zamkne','Losing the phone without 2FA backup codes locks me out'],3,10),
+    B(['Únik jedné služby neohrozí ostatní','A breach of one service doesn’t endanger others'],4,100,'ongoing','rotate','identity'),
+    B(['2FA zastaví většinu převzetí účtů','2FA stops most account takeovers'],4),
+    B(['Rychlejší přihlašování (autofill)','Faster logins (autofill)'],2)]}]},
+ {key:'location', lvl:1, title:['Fotky a poloha na sociálních sítích','Photos and location on social media'], lead:['Sdílet hned, nebo až po odjezdu?','Share now or after you leave?'],
+  goal:'privacy', scope:'activity', activity:['sociální sítě','social media'], assets:{location:4}, adv:['criminals','stalker','people'], options:[
+  {name:['Sdílet hned, kde jsem','Share where I am right now'], sq:true, items:[
+    C(['Kdokoli ví, kde právě jsem','Anyone knows where I am right now'],4,10,'ongoing','aging','location'),
+    C(['Je vidět, že je domov prázdný','It shows my home is empty'],3,15,'ongoing','rotate','location'),
+    C(['Metadata fotek (EXIF/GPS) prozradí místo','Photo metadata (EXIF/GPS) reveals the place'],2,40,'ongoing','aging','location'),
+    B(['Zážitky sdílím v reálném čase','I share experiences in real time'],2)]},
+  {name:['Sdílet až po odjezdu, bez polohy v metadatech','Share after leaving, without location metadata'], items:[
+    C(['Méně okamžitých reakcí přátel','Fewer instant reactions'],1),
+    C(['Musím si pamatovat, co a kdy zveřejnit','I need to remember what to post when'],1),
+    B(['Nikdo neví, kde právě jsem','Nobody knows where I am now'],4,100,'ongoing','rotate','location')]}]},
+ {key:'emailalias', lvl:1, title:['E-mailové aliasy','Email aliases'], lead:['Každá služba dostane jinou adresu.','Every service gets its own address.'],
+  goal:'privacy', scope:'global', assets:{identity:2}, adv:['ads','criminals'], options:[
+  {name:['Jeden e-mail na všechno','One email for everything'], sq:true, items:[
+    C(['Jedna adresa propojí všechny moje účty napříč úniky a makléři','One address links all my accounts across breaches and brokers'],3,100,'ongoing','aging','identity'),
+    C(['Spam a phishing, které nejde zastavit','Spam and phishing I can’t shut off'],2),
+    B(['Jednoduché, nic nového','Simple, nothing new'],2)]},
+  {name:['Aliasy (SimpleLogin, addy.io) nebo vlastní doména s catch-all','Aliases (SimpleLogin, addy.io) or own domain with catch-all'], items:[
+    C(['Nastavení a postupná změna adres u služeb','Setup and gradually changing addresses'],2,100,'once'),
+    C(['Závislost na poskytovateli aliasů','Dependence on the alias provider'],2,20),
+    C(['Vlastní doména stojí peníze a nesmím ji nechat propadnout','Own domain costs money and must not lapse'],1),
+    B(['Makléři a úniky mě nepropojí podle e-mailu','Brokers and breaches can’t link me by email'],3,100,'ongoing','rotate','identity'),
+    B(['Uniklý alias prostě vypnu','A leaked alias is simply switched off'],2),
+    B(['S vlastní doménou změním poskytovatele bez změny adres','With my own domain I can switch providers without changing addresses'],2)]}]},
+ {key:'messenger', lvl:1, title:['Signal místo WhatsApp a SMS','Signal instead of WhatsApp and SMS'], lead:['Šifrovaný obsah i minimum metadat.','Encrypted content and minimal metadata.'],
+  goal:'privacy', scope:'activity', activity:['komunikace','messaging'], assets:{comms:3,social:2}, adv:['platforms','state'], options:[
+  {name:['WhatsApp, Messenger, SMS','WhatsApp, Messenger, SMS'], sq:true, items:[
+    C(['Meta vidí, kdo s kým, kdy a odkud (metadata)','Meta sees who talks to whom, when and from where (metadata)'],3,100,'ongoing','aging','social'),
+    C(['SMS jsou nešifrované a jdou přes operátora','SMS are unencrypted and go through the carrier'],2,100,'ongoing','aging','comms'),
+    B(['Všichni tam jsou','Everyone is there'],4)]},
+  {name:['Signal (případně White Noise / SimpleX pro citlivější věci)','Signal (or White Noise / SimpleX for sensitive things)'], items:[
+    C(['Přesvědčit kontakty','Convincing contacts'],2),
+    C(['Dvě aplikace souběžně','Running two apps for a while'],1),
+    C(['Signal stále vyžaduje telefonní číslo (lze skrýt username)','Signal still requires a phone number (can be hidden behind a username)'],1),
+    B(['Obsah i většina metadat zůstává mezi námi','Content and most metadata stay between us'],3,100,'ongoing','rotate','comms'),
+    B(['Mizející zprávy','Disappearing messages'],2)]}]},
+ {key:'graphene', lvl:2, title:['Přechod na GrapheneOS','Switch to GrapheneOS'], lead:['Z iPhonu nebo běžného Androidu na Pixel s otevřeným systémem.','From iPhone or stock Android to a Pixel with an open OS.'],
+  goal:'privacy', scope:'global', assets:{apps:3,location:3,comms:2}, adv:['platforms','ads'], options:[
+  {name:['Zůstat u iPhonu / běžného Androidu','Stay on iPhone / stock Android'], sq:true, items:[
+    C(['Výrobce a aplikace sbírají telemetrii a seznam aplikací','Vendor and apps collect telemetry and app lists'],3,100,'ongoing','aging','apps'),
+    C(['Závislost na jednom dodavateli (lock-in)','Vendor lock-in'],3),
+    C(['Riziko, že výrobce zakáže aplikaci, kterou potřebuji','Vendor may ban an app I need'],2,30),
+    B(['Všechno funguje, jak jsem zvyklý/á','Everything works as I’m used to'],3),
+    B(['Kompatibilita s rodinou (sdílená alba, předplatné)','Family compatibility (shared albums, subscriptions)'],2),
+    B(['Žádné peníze za nový telefon','No money for a new phone'],3,100,'once')]},
+  {name:['Pixel s GrapheneOS, bez Google účtu','Pixel with GrapheneOS, no Google account'], items:[
+    C(['Přechod zabere cca 2 týdny: instalace, přihlášení, hledání alternativ','Switching takes ~2 weeks: install, logins, alternatives'],4,100,'once'),
+    C(['Cena nového telefonu','Cost of a new phone'],3,100,'once'),
+    C(['Nefunguje placení mobilem přes Google Wallet','Google Wallet tap-to-pay doesn’t work'],2),
+    C(['Ztráta sdílení v rodinném ekosystému','Losing family ecosystem sharing'],2,50),
+    C(['Sociální tření: „ten divný, co mu nic nejde“','Social friction: “the weird one whose stuff doesn’t work”'],1,50),
+    B(['Kontrola nad tím, co systém a aplikace odesílají (oprávnění Network, Sensors)','Control over what OS and apps send (Network, Sensors permissions)'],4,100,'ongoing','rotate','apps'),
+    B(['Instalace libovolné aplikace bez svolení korporace','Install any app without a corporation’s permission'],3),
+    B(['Aplikace, které jinde zakázali, mi dál fungují','Apps banned elsewhere keep working for me'],2,40),
+    B(['Oddělené profily a Private Space','Separate profiles and Private Space'],3),
+    B(['Poloha bez Googlu, režim letadlo drží i po restartu','Location without Google; airplane mode survives reboots'],3,100,'ongoing','rotate','location')]}]},
+ {key:'playsvc', lvl:2, title:['Google Play Services na GrapheneOS','Google Play Services on GrapheneOS'], lead:['Vůbec, v hlavním profilu bez polohy, nebo v odděleném profilu?','Not at all, main profile without location, or a separate profile?'],
+  goal:'privacy', scope:'activity', activity:['telefon s GrapheneOS','GrapheneOS phone'], assets:{apps:3,location:4}, adv:['platforms','ads'], options:[
+  {name:['Bez Play Services','No Play Services'], sq:true, items:[
+    C(['Nechodí push notifikace (banka a 3D Secure, zásilky, chat)','No push notifications (bank 3-D Secure, parcels, chat)'],4),
+    C(['Nefungují aplikace závislé na Googlu (Android Auto, mapy v jiných aplikacích)','Google-dependent apps fail (Android Auto, maps inside apps)'],2,60),
+    B(['Google nezná identitu zařízení ani seznam aplikací','Google knows neither device identity nor app list'],4,100,'ongoing','rotate','apps'),
+    B(['Žádná telemetrie ke Googlu','No telemetry to Google'],3)]},
+  {name:['V hlavním profilu, bez polohy, telefonu a SMS','Main profile, without location, phone and SMS'], items:[
+    C(['Google zná identitu zařízení a seznam aplikací','Google knows device identity and app list'],3,100,'ongoing','aging','apps'),
+    C(['Server může zařízení poslat jiný kód podle konfigurace','Server can push different code based on configuration'],2,30),
+    B(['Fungují push notifikace','Push notifications work'],4),
+    B(['Fungují aplikace závislé na Play Services','Play-dependent apps work'],2),
+    B(['Poloha zůstává chráněná (oprávnění odebráno)','Location stays protected (permission revoked)'],3,100,'ongoing','rotate','location')]},
+  {name:['Jen v odděleném profilu','Separate profile only'], items:[
+    C(['Notifikace chodí jen při zapnutém profilu','Notifications only while the profile runs'],3),
+    C(['Při každém zapnutí profil stejně „volá domů“ s IP a ID zařízení','Each start still phones home with IP and device ID'],2,100,'ongoing','aging','apps'),
+    C(['Přepínání profilů je nepohodlné','Switching profiles is a hassle'],2),
+    B(['Google nevidí aplikace z hlavního profilu','Google can’t see main-profile apps'],3,100,'ongoing','rotate','apps'),
+    B(['Aplikace s Googlem jsou oddělené','Google-dependent apps are isolated'],2)]}]},
+ {key:'cash', lvl:2, title:['Platit víc v hotovosti','Pay more in cash'], lead:['Banka a obchody nemusí znát každý nákup.','Banks and shops don’t need every purchase.'],
+  goal:'privacy', scope:'activity', activity:['každodenní nákupy','everyday purchases'], assets:{finance:3,location:2}, adv:['ads','state','criminals'], options:[
+  {name:['Platit kartou a mobilem','Pay by card and phone'], sq:true, items:[
+    C(['Kompletní historie nákupů a míst u banky a obchodníků','Full purchase and location history at bank and merchants'],3,100,'ongoing','aging','finance'),
+    C(['Věrnostní karty a eKasa/EET propojí účtenky s identitou','Loyalty cards and fiscal receipts link purchases to identity'],2,100,'ongoing','aging','finance'),
+    B(['Pohodlí','Convenience'],3),
+    B(['Nevyčnívám','I blend in'],1)]},
+  {name:['Běžné nákupy hotově, bez věrnostních karet','Everyday purchases in cash, no loyalty cards'], items:[
+    C(['Nosit hotovost a chodit pro ni','Carrying and withdrawing cash'],2),
+    C(['Někde hotovost nepřijmou','Some places refuse cash'],1,40),
+    C(['Přijdu o slevy věrnostních programů','Losing loyalty discounts'],1),
+    C(['Riziko ztráty nebo krádeže hotovosti','Risk of losing cash'],2,10),
+    B(['Nákupy a místa neskládají můj profil','Purchases and places don’t build my profile'],3,100,'ongoing','rotate','finance'),
+    B(['Platím i při výpadku systémů','Works during outages'],2,15)]}]},
+ {key:'cards', lvl:2, title:['Maskované a virtuální karty','Masked and virtual cards'], lead:['Každý obchod dostane jiné číslo karty.','Every merchant gets a different card number.'],
+  goal:'privacy', scope:'activity', activity:['online platby a předplatné','online payments and subscriptions'], assets:{finance:3}, adv:['criminals','ads'], options:[
+  {name:['Jedna karta všude','One card everywhere'], sq:true, items:[
+    C(['Únik u jednoho obchodníka = výměna karty a přenastavení všeho','One merchant breach = replace card and update everything'],2,30),
+    C(['Obchodníci propojí nákupy podle čísla karty','Merchants link purchases by card number'],2,100,'ongoing','aging','finance'),
+    C(['Těžko zrušitelná předplatné','Hard-to-cancel subscriptions'],2,40),
+    B(['Žádné nastavování','No setup'],1)]},
+  {name:['Virtuální karty (Revolut, Wise, banka, Privacy.com v USA)','Virtual cards (Revolut, Wise, bank, Privacy.com in the US)'], items:[
+    C(['Nastavení, banka vyžaduje KYC','Setup; the issuer requires KYC'],1,100,'once'),
+    C(['Banka a vydavatel stále vidí všechno','The bank and issuer still see everything'],2),
+    C(['Občas problém u obchodníka (rezervace, vratky)','Occasional merchant issues (holds, refunds)'],1,30),
+    B(['Únik u obchodníka neohrozí hlavní kartu','A merchant breach doesn’t expose the main card'],2,100,'ongoing','rotate','finance'),
+    B(['Předplatné zruším zablokováním karty','Cancel a subscription by freezing its card'],2),
+    B(['Obchodníci se mezi sebou hůř propojují','Merchants can’t easily link me'],2)]}]},
+ {key:'voip', lvl:2, title:['VoIP číslo místo skutečného','VoIP number instead of your real one'], lead:['Skutečné číslo zná jen pár lidí.','Only a few people know your real number.'],
+  goal:'privacy', scope:'global', assets:{identity:3,location:2}, adv:['ads','criminals','stalker'], options:[
+  {name:['Dávat všude své skutečné číslo','Give my real number everywhere'], sq:true, items:[
+    C(['Číslo je trvalý identifikátor napříč databázemi a úniky','The number is a permanent identifier across databases and breaches'],3,100,'ongoing','aging','identity'),
+    C(['Riziko SIM swapu a převzetí účtů přes SMS','Risk of SIM swap and SMS-based account takeover'],4,5,'ongoing','rotate','identity'),
+    C(['Spam, podvodná volání','Spam and scam calls'],2),
+    B(['Jedno číslo, nic neřeším','One number, no thinking'],2)]},
+  {name:['VoIP číslo (voip.ms, Twilio, sipgate…) pro registrace a obchody','VoIP number (voip.ms, Twilio, sipgate…) for sign-ups and shops'], items:[
+    C(['Nastavení a měsíční poplatek','Setup and monthly fee'],2,100,'once'),
+    C(['Některé služby VoIP čísla odmítají','Some services reject VoIP numbers'],2,60),
+    C(['Spolehlivost a tísňová volání','Reliability and emergency calls'],2,20),
+    B(['Skutečné číslo nekoluje po databázích','Real number stays out of databases'],3,100,'ongoing','rotate','identity'),
+    B(['Číslo snadno vyměním nebo zahodím','Easy to replace or discard'],2)]}]},
+ {key:'vpn', lvl:2, title:['VPN','VPN'], lead:['Komu skrývám provoz a komu ho naopak svěřím?','Who do I hide traffic from, and who do I hand it to?'],
+  goal:'privacy', scope:'global', assets:{browsing:3}, adv:['local','state','ads'], options:[
+  {name:['Bez VPN','No VPN'], sq:true, items:[
+    C(['Poskytovatel internetu vidí, kam chodím, a musí to uchovávat (retence dat)','ISP sees where I go and must retain it (data retention)'],2,100,'ongoing','aging','browsing'),
+    C(['Weby vidí moji IP adresu (přibližná poloha)','Sites see my IP (approximate location)'],2,100,'ongoing','aging','location'),
+    C(['Riziko na veřejné Wi-Fi','Public Wi-Fi exposure'],2,30),
+    B(['Žádné náklady ani zpomalení','No cost or slowdown'],2)]},
+  {name:['Placená VPN bez logů (Mullvad, Proton VPN, IVPN)','Paid no-log VPN (Mullvad, Proton VPN, IVPN)'], items:[
+    C(['Měsíční poplatek','Monthly fee'],1),
+    C(['Důvěru přesouvám na poskytovatele VPN','Trust shifts to the VPN provider'],2),
+    C(['CAPTCHA a blokace u některých služeb (banky, streaming)','CAPTCHAs and blocks (banks, streaming)'],2),
+    C(['Nechrání před službami, kam se přihlásím','No protection from services I log into'],2),
+    B(['Místní síť ani poskytovatel internetu nevidí, kam chodím','Local network and ISP can’t see where I go'],3,100,'ongoing','rotate','browsing'),
+    B(['Weby nevidí moji IP','Sites don’t see my IP'],2,100,'ongoing','rotate','location')]}]},
+ {key:'gdpr', lvl:2, title:['Žádosti o přístup a výmaz (GDPR)','Access and erasure requests (GDPR)'], lead:['Zjistit, kdo má jaká data, a nechat je smazat.','Find out who holds what, and get it deleted.'],
+  goal:'privacy', scope:'global', assets:{identity:2,location:2}, adv:['ads','criminals'], options:[
+  {name:['Nic nežádat','Request nothing'], sq:true, items:[
+    C(['Nevím, kdo o mně co má a komu to prodává','I don’t know who holds what or sells it'],2,100,'ongoing','aging','identity'),
+    C(['Stará data v zapomenutých účtech mohou uniknout','Old data in forgotten accounts can leak'],3,30,'ongoing','aging','identity'),
+    B(['Žádná práce','No work'],2)]},
+  {name:['Žádosti podle čl. 15 a 17 GDPR, rušení starých účtů, opt-out u makléřů','Art. 15/17 GDPR requests, closing old accounts, broker opt-outs'], items:[
+    C(['Hodiny psaní žádostí a urgencí','Hours of writing requests and follow-ups'],3,100,'once'),
+    C(['Musím to opakovat, data se vracejí','Must repeat; data comes back'],2),
+    C(['Při žádosti často prokazuji totožnost','Requests often require proving identity'],1),
+    B(['Vím, kdo co má','I know who holds what'],2),
+    B(['Méně míst, odkud může něco uniknout','Fewer places to leak from'],3,100,'ongoing','rotate','identity')]}]},
+ {key:'delivery', lvl:2, title:['Doručovací adresa místo domova','Delivery address instead of home'], lead:['Výdejní boxy, P.O. Box, CMRA nebo adresa firmy.','Parcel lockers, P.O. box, CMRA or business address.'],
+  goal:'privacy', scope:'activity', activity:['nákupy a pošta','shopping and mail'], assets:{location:4}, adv:['ads','criminals','stalker'], options:[
+  {name:['Vše na domácí adresu','Everything to my home'], sq:true, items:[
+    C(['Domácí adresa v desítkách databází e-shopů a dopravců','Home address in dozens of shop and courier databases'],3,100,'ongoing','aging','location'),
+    C(['Únik spojí moje jméno, adresu a co kupuji','A breach links my name, address and purchases'],3,30,'ongoing','aging','location'),
+    B(['Pohodlné doručení až domů','Convenient door delivery'],3)]},
+  {name:['Výdejní boxy / P.O. Box / CMRA, domácí adresu dávat jen úřadům','Parcel lockers / P.O. box / CMRA; home address only to authorities'], items:[
+    C(['Chodit k boxu nebo na poštu','Walking to the locker or post office'],1),
+    C(['Některé věci vyžadují doručení domů (nábytek)','Some items need home delivery (furniture)'],1,40),
+    C(['P.O. Box nebo CMRA stojí peníze','P.O. box or CMRA costs money'],1),
+    B(['Obchody a dopravci neznají, kde bydlím','Shops and couriers don’t know where I live'],4,100,'ongoing','rotate','location')]}]},
+ {key:'localai', lvl:2, title:['Lokální AI místo cloudové','Local AI instead of cloud AI'], lead:['Nejosobnější otázky nemusí opustit počítač.','Your most personal prompts never leave the machine.'],
+  goal:'privacy', scope:'activity', activity:['práce s AI','working with AI'], assets:{health:3,comms:3}, adv:['platforms','future'], options:[
+  {name:['Cloudové AI s účtem','Cloud AI with an account'], sq:true, items:[
+    C(['Poskytovatel ukládá konverzace (zdraví, práce, vztahy)','Provider stores conversations (health, work, relationships)'],4,100,'ongoing','aging','health'),
+    C(['Data mohou sloužit k tréninku nebo být vydána úřadům','Data may be used for training or handed to authorities'],2,40,'ongoing','aging','comms'),
+    B(['Nejlepší modely bez nastavování','Best models, zero setup'],4)]},
+  {name:['Lokální model (Ollama, LM Studio, llama.cpp) pro citlivé věci','Local model (Ollama, LM Studio, llama.cpp) for sensitive topics'], items:[
+    C(['Výkonný hardware (GPU, RAM)','Capable hardware (GPU, RAM)'],3,100,'once'),
+    C(['Slabší modely','Weaker models'],2),
+    C(['Nastavení a aktualizace','Setup and updates'],2,100,'once'),
+    B(['Citlivé dotazy neopustí zařízení','Sensitive prompts never leave the device'],4,100,'ongoing','rotate','health'),
+    B(['Funguje offline, bez účtu a cenzury poskytovatele','Works offline, no account, no provider filtering'],2)]}]},
+ {key:'linux', lvl:3, title:['Linux místo Windows / macOS','Linux instead of Windows / macOS'], lead:['Systém, který o vás nic neodesílá.','An OS that doesn’t report on you.'],
+  goal:'privacy', scope:'global', assets:{apps:3,browsing:2}, adv:['platforms','ads'], options:[
+  {name:['Zůstat u Windows / macOS','Stay on Windows / macOS'], sq:true, items:[
+    C(['Telemetrie systému a povinný účet','OS telemetry and mandatory account'],3,100,'ongoing','aging','apps'),
+    C(['Cloudové funkce a AI v systému (Recall, Copilot, iCloud)','Cloud and AI features in the OS (Recall, Copilot, iCloud)'],2,60,'ongoing','aging','apps'),
+    B(['Všechny aplikace fungují','All apps work'],4),
+    B(['Žádné učení','No learning curve'],2)]},
+  {name:['Linux (Pop!_OS, Ubuntu, Fedora, Debian) s VM pro výjimky','Linux (Pop!_OS, Ubuntu, Fedora, Debian) with VMs for exceptions'], items:[
+    C(['Učení a přenastavení návyků','Learning and new habits'],3,100,'once'),
+    C(['Některý software chybí (Adobe, část her, specializované programy)','Some software missing (Adobe, some games, niche tools)'],3,60),
+    C(['Kompatibilita hardwaru (Wi-Fi, otisky, uspávání)','Hardware compatibility (Wi-Fi, fingerprint, sleep)'],2,30),
+    B(['Žádná telemetrie systému','No OS telemetry'],3,100,'ongoing','rotate','apps'),
+    B(['Plná kontrola nad aktualizacemi a daty','Full control over updates and data'],3),
+    B(['Starší hardware slouží déle','Older hardware lasts longer'],2)]}]},
+ {key:'homefw', lvl:3, title:['Domácí firewall s VPN a filtrujícím DNS','Home firewall with VPN and filtering DNS'], lead:['Chrání i televizi, chytrou domácnost a návštěvy.','Covers the TV, smart home and guests too.'],
+  goal:'privacy', scope:'global', assets:{browsing:3,location:2}, adv:['local','ads','platforms','state'], options:[
+  {name:['Router od poskytovatele','ISP router'], sq:true, items:[
+    C(['Chytrá TV a IoT odesílají telemetrii','Smart TV and IoT send telemetry'],3,100,'ongoing','aging','browsing'),
+    C(['Poskytovatel vidí všechny DNS dotazy domácnosti','ISP sees every household DNS query'],2,100,'ongoing','aging','browsing'),
+    C(['Firmware routeru bez aktualizací','Router firmware without updates'],2,30),
+    B(['Funguje samo','Works by itself'],3)]},
+  {name:['pfSense / OPNsense box nebo OpenWrt + VPN + DNS filtr (NextDNS, Pi-hole)','pfSense / OPNsense box or OpenWrt + VPN + DNS filter (NextDNS, Pi-hole)'], items:[
+    C(['Hardware','Hardware'],2,100,'once'),
+    C(['Konfigurace (víkend)','Configuration (a weekend)'],3,100,'once'),
+    C(['Ladění, když něco přestane fungovat','Troubleshooting when something breaks'],2),
+    C(['Když to rozbiju, nefunguje internet celé rodině','If I break it, the whole family is offline'],2,20),
+    B(['Celá domácnost za VPN, i zařízení bez nastavení','The whole household behind VPN, even unmanaged devices'],3,100,'ongoing','rotate','browsing'),
+    B(['Blokace sledovacích domén pro všechna zařízení','Tracker domains blocked for every device'],3),
+    B(['Domácí IP nespojí moji aktivitu s adresou','Home IP doesn’t tie activity to my address'],2,100,'ongoing','rotate','location')]}]},
+ {key:'phonehome', lvl:3, title:['Telefon se doma nepřipojuje k síti operátora','Phone never connects to the cell network at home'], lead:['Doma jen Wi-Fi a režim letadlo.','At home only Wi-Fi and airplane mode.'],
+  goal:'privacy', scope:'activity', activity:['pohyb a bydliště','movements and home'], assets:{location:4}, adv:['state','stalker','investigator','criminals'], options:[
+  {name:['Telefon je v síti operátora pořád','Phone always on the cell network'], sq:true, items:[
+    C(['Operátor zaznamenává polohu včetně domova (retence dat)','Carrier logs location including home (data retention)'],4,100,'ongoing','aging','location'),
+    C(['Kdo získá data operátora, zjistí, kde bydlím a spím','Whoever gets carrier data learns where I live and sleep'],4,10,'ongoing','aging','location'),
+    B(['Nic neřeším, volání funguje všude','Nothing to manage, calls work everywhere'],3)]},
+  {name:['Režim letadlo několik km od domova, doma jen Wi-Fi (+ Faradayovo pouzdro)','Airplane mode a few km from home, Wi-Fi only at home (+ Faraday bag)'], items:[
+    C(['Neustálá disciplína','Constant discipline'],3,100,'ongoing','rotate'),
+    C(['Jedno zapomenutí prozradí oblast domova','One slip reveals the home area'],3,40,'ongoing','aging','location'),
+    C(['Zmeškaná volání mimo Wi-Fi','Missed calls off Wi-Fi'],2),
+    C(['Wi-Fi volání nebo VoIP číslo pro dostupnost','Wi-Fi calling or VoIP number for reachability'],1,100,'once'),
+    B(['Data operátora neukazují, kde bydlím','Carrier data doesn’t point to my home'],4,100,'ongoing','rotate','location')]}]},
+ {key:'pseudo', lvl:3, title:['Projekt pod pseudonymem','Project under a pseudonym'], lead:['Oddělit konkrétní projekt od jména.','Separate one project from your name.'],
+  goal:'anonymity', scope:'activity', activity:['konkrétní projekt','a specific project'], assets:{authorship:4,identity:3}, adv:['future','criminals','state'], options:[
+  {name:['Pod vlastním jménem','Under my own name'], sq:true, items:[
+    C(['Projekt je navždy spojen s mým jménem','The project is tied to my name forever'],3,100,'ongoing','perm','authorship'),
+    C(['Ohrožení mě nebo rodiny, pokud projekt někoho naštve','Risk to me or family if it angers someone'],4,10,'ongoing','aging','identity'),
+    B(['Mohu stavět na vlastní reputaci','I can build on my reputation'],4),
+    B(['Snadnější propagace přes kontakty','Easier promotion through contacts'],3)]},
+  {name:['Pseudonym / značka s oddělenou identitou','Pseudonym / brand with separate identity'], items:[
+    C(['Oddělený e-mail, doména, prohlížeč nebo VM, IP adresa','Separate email, domain, browser or VM, IP'],3,100,'once'),
+    C(['Nemohu propagovat přes své kontakty a sítě','Can’t promote through my contacts'],4),
+    C(['Neustálá disciplína: jedna chyba identitu propojí','Constant discipline: one mistake links identities'],3,100,'ongoing','perm'),
+    C(['Platby a infrastruktura bez identity jsou složitější','Identity-free payments and infra are harder'],2),
+    B(['Projekt nelze spojit s mou osobou','The project can’t be linked to me'],4,100,'ongoing','rotate','authorship'),
+    B(['Ochrana před budoucím výkladem jakékoli moci','Protection against any future interpretation'],3,30),
+    B(['Značku lze prodat nebo předat','The brand can be sold or handed over'],2,30)]}]},
+ {key:'alias', lvl:4, title:['Alias jméno v běžném životě','Alias name in everyday life'], lead:['Kavárna, hotel, kurýr, věrnostní program. Nikdy úřady a banky.','Café, hotel, courier, loyalty. Never authorities or banks.'],
+  goal:'privacy', scope:'activity', activity:['běžné nákupy a služby','everyday shopping and services'], assets:{identity:3,location:3}, adv:['ads','stalker','criminals'], options:[
+  {name:['Všude skutečné jméno','Real name everywhere'], sq:true, items:[
+    C(['Skutečné jméno + adresa + telefon v každé databázi','Real name + address + phone in every database'],3,100,'ongoing','aging','identity'),
+    C(['Kdo zná jméno, dohledá zbytek','Knowing the name finds the rest'],3,20,'ongoing','aging','location'),
+    B(['Žádné zmatky','No confusion'],2)]},
+  {name:['Jedno konzistentní alias jméno tam, kde ho nikdo neověřuje','One consistent alias where nobody verifies it'], items:[
+    C(['Zmatek při vyzvedávání a reklamacích','Confusion at pickups and returns'],2,40),
+    C(['Hranice: nikdy u úřadů, bank, pojišťoven a smluv','Limit: never with authorities, banks, insurers, contracts'],2),
+    C(['Rodina a okolí to musí respektovat','Family must play along'],2),
+    B(['Obchody a služby nemají skutečné jméno','Shops and services lack my real name'],3,100,'ongoing','rotate','identity'),
+    B(['Data makléřů se rozmělní (dezinformace)','Broker data gets diluted (disinformation)'],2,50)]}]},
+ {key:'property', lvl:4, title:['Majetek přes právnickou osobu nebo svěřenský fond','Assets via an LLC, trust or company'], lead:['Dům nebo auto tak, aby jméno nebylo ve veřejném rejstříku.','Home or car titled so your name isn’t in a public register.'],
+  goal:'privacy', scope:'activity', activity:['bydlení a majetek','home and assets'], assets:{location:4,finance:3}, adv:['criminals','stalker','investigator'], options:[
+  {name:['Vše na své jméno','Everything in my name'], sq:true, items:[
+    C(['Z adresy jde ve veřejném katastru / registru zjistit jméno vlastníka a naopak','Public land/vehicle registers link address and owner name'],3,100,'ongoing','aging','location'),
+    C(['Bohatství + adresa = cíl pro vydírání a únos (viz útoky na držitele kryptoměn)','Wealth + address = target for extortion and kidnapping (see attacks on crypto holders)'],5,3,'ongoing','aging','finance'),
+    B(['Jednoduché, levné, hypotéka bez komplikací','Simple, cheap, easy mortgage'],4)]},
+  {name:['s.r.o. / svěřenský fond / LLC / living trust (s právníkem a daňovým poradcem)','Company / trust / LLC / living trust (with a lawyer and tax adviser)'], items:[
+    C(['Poradci a založení','Advisers and setup'],3,100,'once'),
+    C(['Účetnictví, poplatky, daňové dopady každý rok','Accounting, fees, tax effects every year'],3),
+    C(['Skutečné majitele stejně eviduje stát (pro úřady to není skryté)','Beneficial owners are still registered with the state'],2),
+    C(['Hypotéka a pojištění jsou složitější','Mortgage and insurance get harder'],3,60),
+    B(['Jméno není přímo u adresy ve veřejném rejstříku','My name isn’t directly tied to the address publicly'],4,100,'ongoing','rotate','location'),
+    B(['Dědění a převod jednodušší','Inheritance and transfer can be easier'],2,40)]}]},
+ {key:'nojs', lvl:4, title:['Vypnout JavaScript všude','Disable JavaScript everywhere'], lead:['Příklad, kdy se ochrana obrátí proti vám.','An example of protection backfiring.'],
+  goal:'privacy', scope:'global', assets:{browsing:3}, adv:['ads'], options:[
+  {name:['JavaScript zapnutý (s blokátorem reklam)','JavaScript on (with an ad blocker)'], sq:true, items:[
+    C(['Skripty mohou sbírat otisk prohlížeče','Scripts can fingerprint the browser'],2,100,'ongoing','rotate','browsing'),
+    B(['Weby fungují','Websites work'],4)]},
+  {name:['JavaScript všude vypnutý','JavaScript off everywhere'], items:[
+    C(['Většina webů nefunguje, neustále něco povoluji','Most sites break; constant allowing'],4),
+    C(['Jsem vzácný, snáz mě poznají','I’m rare, easier to recognise'],3,70,'ongoing','rotate','browsing'),
+    B(['Menší útočná plocha','Smaller attack surface'],2)]}]},
+ {key:'blank', lvl:0, title:['Vlastní rozhodnutí','Your own decision'], lead:['Začněte od nuly.','Start from scratch.'],
+  goal:'privacy', scope:'global', assets:{}, adv:[], options:[{name:['Nic neměnit','Change nothing'], sq:true, items:[]},{name:['Změna','Change'], items:[]}]}
+];
+
+/* ================= STATE ================= */
+const KEY = 'bilance-soukromi-v1';
+const uid = () => Math.random().toString(36).slice(2,10);
+const DEFAULT_SETTINGS = {wOngoing:1.5, wAging:1.5, wPerm:2.5, useAssets:true, spreadM:1, spreadP:20};
+let mem = null;
+function load(){ try{ const s = localStorage.getItem(KEY); if(s) return JSON.parse(s); }catch(e){} return mem; }
+let saveTimer=null;
+function save(){ mem = state; clearTimeout(saveTimer); saveTimer = setTimeout(()=>{ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} },250); }
+function fromTemplate(t){
+  const a = {id:uid(), title:t.key==='blank'?L(t.title):L(t.title), tpl:t.key, created:Date.now(), updated:Date.now(), why:'',
+    goal:t.goal, scope:t.scope, activity:L(t.activity||''), assets:{...t.assets}, adv:[...t.adv], targeted:'', notes:'',
+    options:[], items:[], biases:{}, step:0, settings:{...DEFAULT_SETTINGS}};
+  t.options.forEach(o=>{ const oid = uid(); a.options.push({id:oid, name:L(o.name), sq:!!o.sq});
+    o.items.forEach(it=>a.items.push({id:uid(), o:oid, k:it.k, t:L(it.t), m:it.m, p:it.p, d:it.d, rev:it.rev||'rotate', asset:it.asset, note:''})); });
+  return a;
+}
+function blankAnalysis(){ const a = fromTemplate(TEMPLATES.find(t=>t.key==='blank')); a.title = tr('Moje první analýza','My first analysis'); a.tpl=''; return a; }
+function migrate(a){
+  a.settings = {...DEFAULT_SETTINGS, ...(a.settings||{})};
+  if(a.settings.wIrr && !a.settings._m){ a.settings.wAging = a.settings.wIrr; }
+  a.settings._m = 1;
+  a.items.forEach(it=>{ if(!it.rev) it.rev = it.irr ? 'aging' : 'rotate'; delete it.irr; });
+  a.why = a.why||''; a.targeted = a.targeted||''; a.adv = a.adv||[]; a.assets = a.assets||{}; a.biases = a.biases||{};
+  return a;
+}
+let state = load();
+if(!state || !Array.isArray(state.analyses) || !state.analyses.length){
+  LANG = /^(cs|sk)/i.test(navigator.language||'') ? 'cs' : 'en';
+  const a = blankAnalysis(); state = {analyses:[a], cur:a.id, mode:'guide', lang:LANG};
+}
+LANG = state.lang || LANG;
+state.analyses.forEach(migrate);
+const cur = () => state.analyses.find(a=>a.id===state.cur) || state.analyses[0];
+const openItems = new Set();
+
+/* ================= MODEL ================= */
+function revW(s, rev){ return rev==='perm' ? (+s.wPerm||1) : rev==='aging' ? (+s.wAging||1) : 1; }
+function itemValue(a, it, m=it.m, p=it.p){
+  const s = a.settings;
+  let v = (+m||0) * ((+p||0)/100);
+  if(it.d==='ongoing') v *= +s.wOngoing || 1;
+  v *= revW(s, it.rev);
+  if(s.useAssets && it.asset && a.assets[it.asset]!==undefined) v *= (1 + a.assets[it.asset]) / 3;
+  return v;
+}
+function sq(a){ return a.options.find(o=>o.sq) || a.options[0]; }
+function totals(a, valFn){
+  const t = {}; a.options.forEach(o=>t[o.id]={cost:0,benefit:0});
+  a.items.forEach(it=>{ if(t[it.o]) t[it.o][it.k] += valFn ? valFn(it) : itemValue(a,it); });
+  return t;
+}
+function bestOf(a,t){ let best=null, bv=-Infinity; a.options.forEach(o=>{ const v=t[o.id].benefit - t[o.id].cost; if(v>bv+1e-9){bv=v;best=o;} }); return best; }
+function rng(seed){ return function(){ seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function simulate(a, runs=2000){
+  const s = a.settings; const r = rng(1234567); const wins = {}; a.options.forEach(o=>wins[o.id]=0);
+  const sm = +s.spreadM, sp = +s.spreadP;
+  for(let i=0;i<runs;i++){
+    const t = totals(a, it=>itemValue(a,it, Math.min(5.5, Math.max(0.5, it.m + (r()*2-1)*sm)), Math.min(100, Math.max(0, it.p + (r()*2-1)*sp))));
+    const b = bestOf(a,t); if(b) wins[b.id]++;
+  }
+  Object.keys(wins).forEach(k=>wins[k]=wins[k]/runs); return wins;
+}
+function compute(a){
+  const t = totals(a); const base = sq(a);
+  const comps = a.options.filter(o=>o!==base).map(o=>{ const pro = t[o.id].benefit + t[base.id].cost, con = t[o.id].cost + t[base.id].benefit;
+    return {o, pro, con, net:pro-con, margin:(pro+con)>0 ? (pro-con)/(pro+con) : 0}; });
+  return {t, base, comps, best: a.items.length ? bestOf(a,t) : null, wins: a.items.length ? simulate(a) : {}};
+}
+function verdict(margin, empty){
+  if(empty) return {cls:'mid', v:tr('Zatím není co spočítat','Nothing to compute yet'), short:tr('prázdné','empty')};
+  if(margin > .25) return {cls:'good', v:tr('Změna se vyplatí','Worth changing'), short:tr('vyplatí se','worth it')};
+  if(margin > .08) return {cls:'good', v:tr('Spíš se vyplatí','Probably worth it'), short:tr('spíš ano','leaning yes')};
+  if(margin >= -.08) return {cls:'mid', v:tr('Nerozhodně','Too close to call'), short:tr('nerozhodně','close')};
+  if(margin >= -.25) return {cls:'bad', v:tr('Spíš se nevyplatí','Probably not worth it'), short:tr('spíš ne','leaning no')};
+  return {cls:'bad', v:tr('Zatím se nevyplatí','Not worth it for now'), short:tr('nevyplatí se','not worth it')};
+}
+const f1 = x => (Math.round(x*10)/10).toLocaleString(LANG==='cs'?'cs-CZ':'en-GB',{minimumFractionDigits:1,maximumFractionDigits:1});
+const pct = x => Math.round(x*100)+(LANG==='cs'?' %':'%');
+
+/* ================= INSIGHTS ================= */
+function insights(a, R){
+  const out = []; const base = R.base; const t = R.t; const q = s => '„'+s+'“';
+  const qq = s => LANG==='cs' ? '„'+s+'“' : '“'+s+'”';
+  if(a.why==='safety') out.push({c:'bad', h:tr('Bezpečí na prvním místě','Safety first'), t:tr(
+    'Pokud vám někdo konkrétní ubližuje nebo vás pronásleduje, řešte nejdřív bezpečí: policie (158 / 112) a pomoc obětem: v ČR Linka pomoci obětem kriminality a domácího násilí 116 006, na Slovensku 0800 212 212. Technická opatření přijdou potom. Jedna nedbalost (fotka od známého, společná akce, platba) může prozradit vše.',
+    'If someone specific is hurting or stalking you, deal with safety first: police (112 in the EU, 911 in the US) and victim-support services (e.g. US National DV Hotline 1-800-799-7233, UK 0808 2000 247). Technical measures come after. One slip (a friend’s photo, a shared event, a payment) can expose everything.')});
+  const missing = [];
+  a.options.forEach(o=>['cost','benefit'].forEach(k=>{ if(!a.items.some(it=>it.o===o.id&&it.k===k)) missing.push(qLabel(a,o,k)); }));
+  if(a.items.length && missing.length) out.push({c:'warn', h:tr('Prázdné pole','Empty quadrant'), t:tr('Nevyplněno: ','Missing: ')+missing.map(qq).join(', ')+tr('. Bez nich je výsledek zkreslený. Nejčastěji lidé zapomenou na náklady toho, že nic nezmění.','. Without them the result is skewed. People most often forget the costs of changing nothing.')});
+  R.comps.forEach(c=>{
+    const changeCost = t[c.o.id].cost;
+    if(c.pro>0 && changeCost <= 3 && c.pro >= 2*c.con) out.push({c:'good', h:tr('Levná výhra','Cheap win'), t:qq(c.o.name)+tr(' stojí málo a přináší hodně. Takové kroky se vyplatí udělat hned a plošně. Nejlevnější obrana je, když vás protivník vůbec nevidí.',' costs little and pays a lot. Do these now and broadly. The cheapest defence is not being observed at all.')});
+    if(a.items.length && Math.abs(c.margin) <= .08) out.push({c:'warn', h:tr('Těsný výsledek','Close call'), t:tr('U ','For ')+qq(c.o.name)+tr(' je to skoro nastejno. Zkuste mezicestu: jen pro jednu činnost, v odděleném profilu, s omezenými oprávněními.',' it’s nearly even. Try a middle path: one activity, a separate profile, restricted permissions.')});
+  });
+  if(R.best && R.wins[R.best.id] !== undefined && R.wins[R.best.id] < .7) out.push({c:'warn', h:tr('Citlivé na odhady','Sensitive to estimates'), t:tr('Vítěz vyhrává jen v ','The winner only wins ')+pct(R.wins[R.best.id])+tr(' simulací. Zpřesněte položky s největší vahou.',' of simulations. Refine the heaviest items first.')});
+  if(R.best && R.best.sq){
+    const irr = a.items.filter(it=>it.o===base.id && it.k==='cost' && it.rev!=='rotate');
+    if(irr.length) out.push({c:'bad', h:tr('Ponecháváte nevratná rizika','You keep irreversible risks'), t:irr.map(i=>qq(i.t||tr('bez názvu','untitled'))).join(', ')+tr('. Pokud se stanou, nepůjdou vzít zpět. Ověřte, že jste nepodcenil/a pravděpodobnost.','. If they happen they can’t be undone. Check you haven’t underestimated the probability.')});
+  }
+  if(a.items.some(it=>it.rev==='perm' && it.k==='cost')) out.push({c:'info', h:tr('Trvalá data','Permanent data'), t:tr('Biometrii, obličej, hlas ani DNA nejde po úniku vyměnit jako heslo. Kde jde o ně, raději je vůbec nedávejte (fotky obličeje, otisk pro odemykání služeb, genetické testy).','Biometrics, face, voice and DNA can’t be rotated after a leak like a password. Where they’re involved, prefer not to hand them over at all (face photos, fingerprint logins, DNA tests).')});
+  if(a.goal==='anonymity' && a.scope==='global') out.push({c:'bad', h:tr('Anonymita ve všem téměř nejde','Total anonymity rarely works'), t:tr('Kdo chce být anonymní úplně všude, obvykle selže a je pak nápadnější. Zúžte anonymitu na konkrétní činnost a jinde zvyšujte soukromí tam, kde je to levné.','Trying to be anonymous everywhere usually fails and makes you stand out. Narrow anonymity to a specific activity; elsewhere raise privacy where it’s cheap.')});
+  if(a.goal==='anonymity' && a.scope==='activity') out.push({c:'info', h:tr('Kontrolní seznam oddělení','Compartmentalisation checklist'), t:tr('Pro ','For ')+qq(a.activity||tr('tuto činnost','this activity'))+tr(': jiný prohlížeč nebo VM, jiná IP adresa, jiný e-mail a číslo, platby bez identity, nesdílet přes své kontakty, pozor na styl psaní, časové pásmo a fyzickou přítomnost pod skutečným jménem. Jedna chyba propojí vše.',': separate browser or VM, IP, email and number, identity-free payments, no promotion via your contacts, watch writing style, time zone and showing up in person under your real name. One slip links everything.')});
+  // adversary capability
+  const maxCap = Math.max(0, ...a.adv.map(k=>(ADV.find(x=>x[0]===k)||[0,0])[1]));
+  const targetedAdv = a.adv.some(k=>(ADV.find(x=>x[0]===k)||[])[2]);
+  if(a.targeted==='yes' || targetedAdv){
+    if(R.best && !R.best.sq && t[R.best.id].cost <= 4) out.push({c:'warn', h:tr('Možná málo','Possibly too little'), t:tr('Proti někomu, kdo jde cíleně po vás, jedno levné opatření nestačí. Hledejte nejslabší článek a myslete na pohyb, adresu a lidi kolem, ne jen na technologii.','Against someone targeting you, one cheap measure isn’t enough. Look for the weakest link and think about movements, address and the people around you, not just tech.')});
+  } else if(a.targeted==='no' && maxCap<=2 && R.best && !R.best.sq && t[R.best.id].cost >= 15) out.push({c:'info', h:tr('Možná přestřelujete','Possibly overkill'), t:tr('Proti plošnému sběru dat (reklama, platformy) obvykle stačí levnější opatření. Silné nástroje proti slabému protivníkovi stojí čas a pozornost, které chybí jinde.','Against untargeted collection (ads, platforms) cheaper measures usually suffice. Heavy tools against a weak adversary cost time and attention needed elsewhere.')});
+  if(a.adv.includes('future')) out.push({c:'info', h:tr('Budoucí moc','Future power'), t:tr('Data vydrží déle než vlády i firmy. Údaj ze sčítání nebo z daňového přiznání, který dnes nikomu nevadí, může mít zítra jiný význam.','Data outlives governments and companies. A census or tax record harmless today may mean something else tomorrow.')});
+  if(a.adv.includes('criminals') && ((a.assets.finance||0)>=3 || (a.assets.location||0)>=3)) out.push({c:'warn', h:tr('Fyzické bezpečí','Physical safety'), t:tr('Kombinace „kolik mám“ a „kde bydlím“ je pro zločince nejcennější. Když unikne jedna databáze se jménem a adresou, ochrana jinde už to nevrátí.','“What I own” plus “where I live” is what criminals value most. Once one database with name and address leaks, protection elsewhere can’t undo it.')});
+  BIASES.forEach(b=>{ const ans = a.biases[b.k]; if(ans && ans!==b.good) out.push({c:'warn', h:tr('Kontrola předsudků','Bias check'), t:L(b.nudge)}); });
+  if(a.items.length && BIASES.every(b=>!a.biases[b.k])) out.push({c:'info', h:tr('Kontrola předsudků','Bias check'), t:tr('Ještě jste neprošli kontrolu předsudků. Trvá dvě minuty a často změní odhady víc než cokoli jiného.','You haven’t done the bias check yet. It takes two minutes and often shifts estimates more than anything else.')});
+  return out;
+}
+
+/* ================= RENDER HELPERS ================= */
+const esc = s => String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const g = (key, text) => `<button type="button" class="g" data-act="gloss" data-k="${key}">${esc(text)}</button>`;
+const X = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+function isTwo(a){ return a.options.length===2; }
+function qLabel(a,o,k){
+  if(o.sq) return k==='cost' ? tr('Náklady toho, že nic nezměním','Costs of changing nothing') : tr('Přínosy toho, že nic nezměním','Benefits of changing nothing');
+  if(isTwo(a)) return k==='cost' ? tr('Náklady změny','Costs of changing') : tr('Přínosy změny','Benefits of changing');
+  return (k==='cost' ? tr('Náklady: ','Costs: ') : tr('Přínosy: ','Benefits: ')) + o.name;
+}
+function qHint(o,k){
+  if(o.sq) return k==='cost' ? tr('Co vás stojí, když zůstanete u současného stavu? Sběr dat, závislost, rizika, autocenzura.','What does staying put cost you? Data collection, lock-in, risks, self-censorship.') : tr('Co vám současný stav dává? Pohodlí, zvyk, kompatibilita s okolím.','What does the status quo give you? Convenience, habit, compatibility.');
+  return k==='cost' ? tr('Co vás změna bude stát? Čas, peníze, učení, nepohodlí, sociální tření, disciplína.','What will the change cost? Time, money, learning, hassle, social friction, discipline.') : tr('Co vám změna přinese? Kontrola, svoboda, bezpečí, menší stopa.','What will the change bring? Control, freedom, safety, smaller footprint.');
+}
+function inspFor(o,k){ return o.sq ? (k==='cost'?INSP.sqCost:INSP.sqBen) : (k==='cost'?INSP.chCost:INSP.chBen); }
+function sumOf(a,o,k){ return a.items.filter(it=>it.o===o.id&&it.k===k).reduce((s,it)=>s+itemValue(a,it),0); }
+
+function itemRow(a,it,expert){
+  const probOpts = PROB.some(p=>p[0]===+it.p) ? '' : `<option value="${it.p}" selected>${it.p} %</option>`;
+  const prob = expert
+    ? `<input class="p num" type="number" min="0" max="100" step="5" data-f="p" value="${esc(it.p)}" aria-label="${tr('Pravděpodobnost v procentech','Probability in percent')}" title="%">`
+    : `<select data-f="p" aria-label="${tr('Jak pravděpodobné','How likely')}">${probOpts}${PROB.map(p=>`<option value="${p[0]}" ${+it.p===p[0]?'selected':''}>${L(p[1])}</option>`).join('')}</select>`;
+  return `<div class="item ${openItems.has(it.id)?'open':''}" data-id="${it.id}">
+    <input class="t" type="text" data-f="t" value="${esc(it.t)}" placeholder="${tr('Popište jednou větou','Describe in one sentence')}" aria-label="${tr('Popis položky','Item description')}">
+    <select data-f="m" aria-label="${tr('Jak velké','How big')}" title="${esc(L(MAG_HINT))}">${[1,2,3,4,5].map(m=>`<option value="${m}" ${+it.m===m?'selected':''}>${m} · ${L(MAG[m])}</option>`).join('')}</select>
+    ${prob}
+    <button class="iconbtn more" type="button" data-act="more" aria-label="${tr('Podrobnosti','Details')}" title="${tr('Podrobnosti','Details')}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+    <button class="iconbtn" type="button" data-act="del-item" aria-label="${tr('Smazat položku','Delete item')}" title="${tr('Smazat','Delete')}">${X}</button>
+    <div class="adv">
+      <select data-f="d" aria-label="${tr('Trvání','Duration')}"><option value="once" ${it.d==='once'?'selected':''}>${tr('jednorázové','one-off')}</option><option value="ongoing" ${it.d!=='once'?'selected':''}>${tr('opakuje se','ongoing')}</option></select>
+      <select data-f="rev" aria-label="${tr('Vratnost','Reversibility')}">${Object.keys(REV).map(k=>`<option value="${k}" ${it.rev===k?'selected':''}>${L(REV[k])}</option>`).join('')}</select>
+      <select data-f="asset" aria-label="${tr('Co to chrání','What it protects')}"><option value="">${tr('chrání: nic konkrétního','protects: nothing specific')}</option>${ASSETS.map(s=>`<option value="${s[0]}" ${it.asset===s[0]?'selected':''}>${tr('chrání: ','protects: ')}${L(s[1])}</option>`).join('')}</select>
+      <input class="note" type="text" data-f="note" value="${esc(it.note)}" placeholder="${tr('Poznámka, zdroj, předpoklad','Note, source, assumption')}" aria-label="${tr('Poznámka','Note')}">
+      <span class="num muted small" data-val="${it.id}" title="${tr('Vážená hodnota položky','Weighted item value')}">${f1(itemValue(a,it))} ${tr('b.','pts')}</span>
+    </div>
+  </div>`;
+}
+function quadBox(a,o,k,expert){
+  const items = a.items.filter(it=>it.o===o.id && it.k===k);
+  const insp = inspFor(o,k);
+  const chips = expert ? '' : `<div class="chips no-print">${insp.map((c,i)=>[c,i]).filter(([c])=>!items.some(it=>it.t===L(c[0]))).map(([c,i])=>`<button type="button" class="chip" data-act="insp" data-o="${o.id}" data-k="${k}" data-i="${i}">+ ${esc(L(c[0]))}</button>`).join('')}</div>`;
+  return `<section class="qbox ${k}">
+    <div class="qhead"><h3>${esc(qLabel(a,o,k))}</h3><span class="sum" data-sum="${o.id}-${k}">${f1(sumOf(a,o,k))} ${tr('b.','pts')}</span></div>
+    ${expert?'':`<p class="qhint">${qHint(o,k)}</p>`}
+    <div class="qbody">
+      ${items.length ? items.map(it=>itemRow(a,it,expert)).join('') : `<p class="empty">${tr('Zatím nic.','Nothing yet.')}</p>`}
+      <div class="addrow no-print"><input type="text" id="add-${o.id}-${k}" data-add="${o.id}|${k}" placeholder="${k==='cost'?tr('Přidat náklad a Enter','Add a cost and press Enter'):tr('Přidat přínos a Enter','Add a benefit and press Enter')}" aria-label="${esc(qLabel(a,o,k))}"><button class="btn sm" type="button" data-act="add" data-o="${o.id}" data-k="${k}">${tr('Přidat','Add')}</button></div>
+      ${chips}
+    </div>
+  </section>`;
+}
+function quadrants(a,expert){
+  const base = sq(a); const order = [...a.options.filter(o=>o!==base), base];
+  return order.map(o=>`<div class="optgroup">
+      ${isTwo(a) && !expert ? '' : `<h3><span class="badge ${o.sq?'sq':'ch'}">${o.sq?tr('výchozí stav','status quo'):tr('možnost','option')}</span> ${esc(o.name)}</h3>`}
+      <div class="quad">${quadBox(a,o,'cost',expert)}${quadBox(a,o,'benefit',expert)}</div>
+    </div>`).join('');
+}
+
+/* ---------- sections ---------- */
+function secTitle(a){
+  return `<div><label class="f" for="f-title">${tr('Co se rozhodujete?','What are you deciding?')}</label>
+    <input type="text" id="f-title" data-meta="title" value="${esc(a.title)}" placeholder="${tr('Např. Mám přejít na jiný telefon?','E.g. Should I switch phones?')}"></div>`;
+}
+function secWhy(a){
+  return `<div class="stack"><div><h3>${tr('Proč to řešíte?','Why are you looking into this?')}</h3><p class="lead small">${tr('Podle toho doporučím, kde začít. Každý má jiný důvod a jiné pořadí kroků.','This decides where to start. Everyone has a different reason and a different order.')}</p></div>
+    <div class="why" role="radiogroup">${WHY.map(w=>`<label><input type="radio" name="why" data-meta="why" value="${w[0]}" ${a.why===w[0]?'checked':''}><span><b>${L(w[1])}</b><small>${L(w[2])}</small></span></label>`).join('')}</div></div>`;
+}
+function secTemplates(a){
+  const rec = (WHY.find(w=>w[0]===a.why)||[])[3] || [];
+  const tile = t => `<button type="button" class="tpl ${rec.includes(t.key)?'rec':''}" data-act="tpl" data-k="${t.key}">${rec.includes(t.key)?`<span class="recb">${tr('pro vás','for you')}</span>`:''}<b>${esc(L(t.title))}</b><span>${esc(L(t.lead))}</span></button>`;
+  return [1,2,3,4].map(l=>`<div class="lvl-h"><h3>${L(LEVELS[l][0])}</h3><span>${L(LEVELS[l][1])}</span></div><div class="tpl-grid">${TEMPLATES.filter(t=>t.lvl===l).map(tile).join('')}${l===4?tile(TEMPLATES.find(t=>t.key==='blank')):''}</div>`).join('');
+}
+function secGoal(a){
+  return `<div class="stack">
+    <div><h3>${tr('Jde vám o ','Is this about ')}${g('soukromi',tr('soukromí','privacy'))}${tr(', nebo o ',' or ')}${g('anonymita',tr('anonymitu','anonymity'))}?</h3><p class="lead small">${tr('Dvě různé úlohy. Soukromí se dá zvyšovat plošně tam, kde je to levné. Anonymita jde realisticky jen pro konkrétní činnost.','Two different jobs. Privacy can be raised broadly where it’s cheap. Anonymity realistically works only for a specific activity.')}</p></div>
+    <div class="choice" role="radiogroup">
+      <label><input type="radio" name="goal" data-meta="goal" value="privacy" ${a.goal==='privacy'?'checked':''}><span><b>${tr('Soukromí','Privacy')}</b><small>${tr('Chci rozhodovat, kdo o mně co ví.','I want to choose who knows what about me.')}</small></span></label>
+      <label><input type="radio" name="goal" data-meta="goal" value="anonymity" ${a.goal==='anonymity'?'checked':''}><span><b>${tr('Anonymita','Anonymity')}</b><small>${tr('Konkrétní činnost nesmí jít spojit s mou osobou.','A specific activity must not link to me.')}</small></span></label>
+      <label><input type="radio" name="goal" data-meta="goal" value="unsure" ${a.goal==='unsure'?'checked':''}><span><b>${tr('Nevím','Not sure')}</b><small>${tr('Začněte soukromím, je levnější.','Start with privacy, it’s cheaper.')}</small></span></label>
+    </div>
+    <div><h3>${tr('Pro jakou část života?','For which part of life?')}</h3></div>
+    <div class="choice" role="radiogroup">
+      <label><input type="radio" name="scope" data-meta="scope" value="global" ${a.scope==='global'?'checked':''}><span><b>${tr('Celkově','Overall')}</b><small>${tr('Telefon, prohlížeč, placení… všude.','Phone, browser, payments… everywhere.')}</small></span></label>
+      <label><input type="radio" name="scope" data-meta="scope" value="activity" ${a.scope==='activity'?'checked':''}><span><b>${tr('Konkrétní činnost','A specific activity')}</b><small>${tr('Jeden projekt, jedna oblast života.','One project, one area of life.')}</small></span></label>
+    </div>
+    ${a.scope==='activity'?`<div><label class="f" for="f-act">${tr('Která činnost?','Which activity?')}</label><input type="text" id="f-act" data-meta="activity" value="${esc(a.activity)}" placeholder="${tr('Např. investování, blog, sociální sítě','E.g. investing, blog, social media')}"></div>`:''}
+  </div>`;
+}
+function secAssets(a){
+  return `<div class="stack">
+    <div><h3>${tr('Co chráníte?','What are you protecting?')}</h3><p class="lead small">${tr('Rozdělte si to na tři patra: co by vás ohrozilo (finance, komunikace, zdraví, poloha), co by bylo jen trapné, a co je jedno. Úsilí soustřeďte na horní patro. Ohodnoťte jen to, na čem záleží.','Sort into three tiers: what could endanger you (money, communications, health, location), what would only embarrass, and what doesn’t matter. Spend effort on the top tier. Rate only what matters.')}</p></div>
+    <div class="assets">${ASSETS.map(s=>`<div class="asset"><div><b>${L(s[1])}</b><small>${L(s[2])}</small></div>
+      <div class="lvl" role="group" aria-label="${esc(L(s[1]))}">${LVL.map((l,i)=>`<button type="button" data-act="asset" data-k="${s[0]}" data-v="${i}" aria-pressed="${a.assets[s[0]]===i}">${L(l)}</button>`).join('')}</div></div>`).join('')}</div>
+  </div>`;
+}
+function secAdv(a){
+  return `<div class="stack">
+    <div><h3>${tr('Před kým?','From whom?')}</h3><p class="lead small">${tr('Tomu se říká ','This is your ')}${g('threat',tr('model hrozeb','threat model'))}${tr('. Protivníci se liší schopnostmi a tím, jestli jdou cíleně po vás. Stejné opatření může být proti jednomu zbytečně silné a proti jinému nebezpečně slabé.','. Adversaries differ in capability and in whether they target you specifically. The same measure can be overkill against one and dangerously weak against another.')}</p></div>
+    <div class="checks">${ADV.map(x=>`<label><input type="checkbox" data-act="adv" data-k="${x[0]}" ${a.adv.includes(x[0])?'checked':''}><span><b>${L(x[3])}</b><span class="cap">${L(CAP[x[1]])}${x[2]?' · '+tr('cílený','targeted'):''}</span><br><span class="muted small">${L(x[4])}</span></span></label>`).join('')}</div>
+    <div><h3>${tr('Jde někdo cíleně po vás?','Is anyone targeting you specifically?')}</h3><p class="lead small">${tr('Lidé obvykle přeceňují, že je někdo sleduje osobně, a podceňují, kolik už o nich ví plošný sběr dat.','People tend to overestimate being individually targeted and underestimate how much routine collection already knows.')}</p></div>
+    <div class="choice" role="radiogroup">${[['no',tr('Ne','No')],['maybe',tr('Možná','Maybe')],['yes',tr('Ano','Yes')]].map(([v,l])=>`<label><input type="radio" name="targeted" data-meta="targeted" value="${v}" ${a.targeted===v?'checked':''}><span><b>${l}</b></span></label>`).join('')}</div>
+  </div>`;
+}
+function secOptions(a){
+  return `<div class="stack">
+    ${a.options.map(o=>`<div class="opt"><span class="badge ${o.sq?'sq':'ch'}">${o.sq?tr('výchozí stav','status quo'):tr('možnost','option')}</span>
+      <input type="text" data-opt="${o.id}" value="${esc(o.name)}" aria-label="${tr('Název možnosti','Option name')}">
+      ${o.sq?'':`<button class="btn sm ghost" type="button" data-act="set-sq" data-o="${o.id}">${tr('Je to současný stav','Make status quo')}</button>`}
+      ${a.options.length>2?`<button class="iconbtn" type="button" data-act="del-opt" data-o="${o.id}" aria-label="${tr('Smazat možnost','Delete option')}">${X}</button>`:''}
+    </div>`).join('')}
+    <div class="row"><button class="btn" type="button" data-act="add-opt">${tr('+ Přidat možnost (mezicesta)','+ Add option (middle path)')}</button></div>
+  </div>`;
+}
+function secTP(a){
+  return `<div class="stack"><div><h3>${g('timepref',tr('Časová preference','Time preference'))}</h3><p class="lead small">${tr('Pohodlí sledovaných služeb je okamžité a jisté, jejich náklady přijdou později a nejistě. Soukromí se naopak splácí postupně. Jak moc vám záleží na budoucnosti? Mění to váhu opakujících se položek.','Surveilled convenience is immediate and certain; its costs come later and uncertain. Privacy pays back gradually. How much do you value the future? This sets the weight of ongoing items.')}</p></div>
+    <div class="tp" role="group">${TP.map(x=>`<button type="button" data-act="tp" data-v="${x[0]}" aria-pressed="${+a.settings.wOngoing===x[0]}"><b>${L(x[1])}</b><small>${L(x[2])} · ×${x[0]}</small></button>`).join('')}</div></div>`;
+}
+function secBiases(a){
+  return `<div class="stack">${BIASES.map(b=>{ const ans=a.biases[b.k]; const bad = ans && ans!==b.good;
+    return `<div class="bias"><b>${esc(L(b.q))}</b>
+      <div class="ans" role="group">${[['yes',tr('Ano','Yes')],['no',tr('Ne','No')],['unsure',tr('Nevím','Not sure')]].map(x=>`<button type="button" data-act="bias" data-k="${b.k}" data-v="${x[0]}" aria-pressed="${ans===x[0]}">${x[1]}</button>`).join('')}</div>
+      ${bad?`<p class="nudge">${esc(L(b.nudge))}</p>`:''}</div>`; }).join('')}</div>`;
+}
+function secWeights(a){
+  const s=a.settings;
+  return `<div class="weights">
+    <label>${tr('Násobek opakujících se položek (časová preference)','Ongoing multiplier (time preference)')}<input type="number" step="0.1" min="1" max="10" data-set="wOngoing" value="${s.wOngoing}"></label>
+    <label>${tr('Násobek: stárnoucí data','Multiplier: ageing data')}<input type="number" step="0.1" min="1" max="10" data-set="wAging" value="${s.wAging}"></label>
+    <label>${tr('Násobek: trvalá data','Multiplier: permanent data')}<input type="number" step="0.1" min="1" max="10" data-set="wPerm" value="${s.wPerm}"></label>
+    <label>${tr('Rozptyl velikosti v simulaci (±)','Simulation spread, magnitude (±)')}<input type="number" step="0.5" min="0" max="3" data-set="spreadM" value="${s.spreadM}"></label>
+    <label>${tr('Rozptyl pravděpodobnosti (± p. b.)','Simulation spread, probability (± pp)')}<input type="number" step="5" min="0" max="50" data-set="spreadP" value="${s.spreadP}"></label>
+    <label class="row" style="flex-direction:row;align-items:center"><input type="checkbox" data-set="useAssets" ${s.useAssets?'checked':''}> ${tr('Vážit citlivostí chráněné věci','Weight by sensitivity of protected asset')}</label>
+  </div>
+  <p class="small muted">${tr('Hodnota = velikost (1–5) × pravděpodobnost × násobek opakování × násobek vratnosti × (1 + citlivost) / 3. Citlivost 0–4 dává 0,33–1,67; nehodnocená věc 1.','Value = magnitude (1–5) × probability × ongoing multiplier × reversibility multiplier × (1 + sensitivity) / 3. Sensitivity 0–4 gives 0.33–1.67; unrated = 1.')}</p>`;
+}
+
+/* ---------- results ---------- */
+function trunc(s,n){ s=String(s||''); return s.length>n ? s.slice(0,n-1)+'…' : s; }
+function bars(a,R){
+  const rows = R.comps; if(!rows.length) return '';
+  const max = Math.max(1, ...rows.flatMap(c=>[c.pro,c.con])); const w = v => Math.max(1,(v/max)*100).toFixed(1)+'%';
+  return `<div class="bars">${rows.map(c=>`<div class="bar-row"><b class="small">${esc(c.o.name)}</b>
+      <div class="bar"><span class="pro" style="width:${w(c.pro)}"></span><em class="num">${tr('pro','for')} ${f1(c.pro)}</em></div>
+      <div class="bar"><span class="con" style="width:${w(c.con)}"></span><em class="num">${tr('proti','against')} ${f1(c.con)}</em></div></div>`).join('')}
+    <p class="small muted">${tr('„Pro“ = přínosy možnosti + náklady toho, že nic nezměníte. „Proti“ = náklady možnosti + přínosy současného stavu.','“For” = option benefits + costs of changing nothing. “Against” = option costs + status-quo benefits.')}</p></div>`;
+}
+function drivers(a,R){
+  if(!R.comps.length || !a.items.length) return '';
+  const c = R.comps.slice().sort((x,y)=>y.net-x.net)[0]; const base = R.base;
+  const pro = a.items.filter(it=>(it.o===c.o.id&&it.k==='benefit')||(it.o===base.id&&it.k==='cost'));
+  const con = a.items.filter(it=>(it.o===c.o.id&&it.k==='cost')||(it.o===base.id&&it.k==='benefit'));
+  const li = arr => arr.length ? `<ol>${arr.map(it=>[it,itemValue(a,it)]).sort((x,y)=>y[1]-x[1]).slice(0,3).map(([it,v])=>`<li>${esc(it.t||tr('bez názvu','untitled'))} <span class="num muted">${f1(v)}</span></li>`).join('')}</ol>` : `<p class="small muted">${tr('nic','nothing')}</p>`;
+  const n = Math.max(1,Math.round(Math.abs(c.net)/(4*(a.settings.wOngoing||1))));
+  return `<div><h3>${tr('Co rozhoduje u ','What decides ')}${esc(trunc(c.o.name,50))}</h3><div class="drivers"><div><b style="color:var(--pro)">${tr('Nejsilněji pro','Strongest for')}</b>${li(pro)}</div><div><b style="color:var(--con)">${tr('Nejsilněji proti','Strongest against')}</b>${li(con)}</div></div>
+    ${c.net!==0?`<p class="small muted">${tr('Výsledek by se otočil, kdyby na ','The result would flip if ')}${c.net>0?tr('straně proti','the against side'):tr('straně pro','the for side')}${tr(' přibylo zhruba ',' gained about ')}${f1(Math.abs(c.net))}${tr(' bodů, tedy asi ',' points, roughly ')}${n}${tr('× „velká, jistá, opakující se“ položka.','× a “large, certain, ongoing” item.')}</p>`:''}</div>`;
+}
+function summaryTable(a,R){
+  return `<div class="tablewrap"><table><thead><tr><th>${tr('Možnost','Option')}</th><th class="n">${tr('Náklady','Costs')}</th><th class="n">${tr('Přínosy','Benefits')}</th><th class="n">${tr('Saldo','Net')}</th><th class="n" title="${tr('Jak často vyhraje ve 2 000 simulacích','How often it wins in 2,000 simulations')}">${tr('Simulace','Simulation')}</th></tr></thead><tbody>
+    ${a.options.map(o=>{const t=R.t[o.id]; return `<tr><td class="optc">${o.sq?`<span class="badge sq">${tr('dnes','today')}</span> `:''}${esc(o.name)}${R.best===o?` <span class="pill good">${tr('nejlepší','best')}</span>`:''}</td><td class="n">${f1(t.cost)}</td><td class="n">${f1(t.benefit)}</td><td class="n">${f1(t.benefit-t.cost)}</td><td class="n">${R.wins[o.id]!==undefined?pct(R.wins[o.id]):'–'}</td></tr>`}).join('')}
+  </tbody></table></div>`;
+}
+function renderResults(a, R){
+  const empty = !a.items.length; let head;
+  if(empty) head = `<div class="verdict mid"><span class="v">${tr('Zatím není co spočítat','Nothing to compute yet')}</span><p class="small">${tr('Přidejte náklady a přínosy, výsledek se počítá průběžně.','Add costs and benefits; the result updates live.')}</p></div>`;
+  else if(R.comps.length===1){ const c=R.comps[0]; const v=verdict(c.margin,false);
+    head = `<div class="verdict ${v.cls}"><span class="small muted">${esc(c.o.name)}</span><span class="v">${v.v}</span>
+      <p class="small">${tr('Pro','For')} ${f1(c.pro)} · ${tr('proti','against')} ${f1(c.con)}. ${tr('Stejný vítěz vyšel v ','Same winner in ')}${pct(R.wins[R.best.id]||0)}${tr(' z 2 000 simulací s pozměněnými odhady.',' of 2,000 simulations with perturbed estimates.')}</p></div>`; }
+  else { const best = R.best;
+    head = `<div class="verdict ${best.sq?'bad':'good'}"><span class="small muted">${tr('Nejlépe vychází','Best option')}</span><span class="v">${esc(best.name)}</span>
+      <p class="small">${best.sq?tr('Současný stav vychází lépe než všechny změny.','The status quo beats every change.'):tr('Porovnáno se současným stavem i ostatními možnostmi.','Compared with the status quo and every other option.')} ${tr('Vítězí v ','Wins ')}${pct(R.wins[best.id]||0)}${tr(' simulací.',' of simulations.')}</p></div>`; }
+  const ins = insights(a,R);
+  return `<div class="results">${head}
+    ${empty?'':bars(a,R)+summaryTable(a,R)+drivers(a,R)}
+    ${ins.length?`<div><h3>${tr('Na co myslet','Things to consider')}</h3><ul class="insights">${ins.map(i=>`<li class="${i.c}"><b>${esc(i.h)}.</b> ${esc(i.t)}</li>`).join('')}</ul></div>`:''}
+    <details><summary>${tr('Jak se to počítá','How it’s calculated')}</summary><p class="small">${tr('Každá položka dostane body: velikost (1–5) × pravděpodobnost × násobek, pokud se opakuje (časová preference) × násobek vratnosti (stárnoucí 1,5, trvalé 2,5) × citlivost věci, kterou chrání. Pro každou změnu se sečte „pro“ (její přínosy + náklady současného stavu) a „proti“ (její náklady + přínosy současného stavu). Simulace 2 000× náhodně posune velikosti o ±1 a pravděpodobnosti o ±20 p. b. a sleduje, jak často vyhraje stejná možnost. Čísla nejsou pravda, ale pomůcka: ukážou, kde vaše odhady rozhodují.','Each item scores: magnitude (1–5) × probability × ongoing multiplier (time preference) × reversibility multiplier (ageing 1.5, permanent 2.5) × sensitivity of the protected asset. For each change, “for” = its benefits + status-quo costs, “against” = its costs + status-quo benefits. The simulation perturbs magnitudes by ±1 and probabilities by ±20 pp 2,000 times and counts how often the same option wins. The numbers aren’t truth, they show where your estimates matter.')}</p></details>
+    <div class="row no-print">
+      <button class="btn" type="button" data-act="export-md">${tr('Zpráva (Markdown)','Report (Markdown)')}</button>
+      <button class="btn" type="button" data-act="export-json">${tr('Záloha (JSON)','Backup (JSON)')}</button>
+      ${inFrame()?'':`<button class="btn" type="button" data-act="print">${tr('Tisk / PDF','Print / PDF')}</button>`}
+    </div></div>`;
+}
+
+/* ---------- views ---------- */
+const STEPS = [['Rozhodnutí','Decision'],['Co chráníte','What you protect'],['Možnosti','Options'],['Náklady a přínosy','Costs and benefits'],['Kontrola předsudků','Bias check'],['Výsledek','Result']];
+function renderGuide(a){
+  const s = a.step||0; let body = '';
+  if(s===0) body = `<section class="panel stack"><h2>${tr('Co se rozhodujete?','What are you deciding?')}</h2>
+      <div class="explain"><strong>${tr('Jak to funguje:','How it works:')}</strong> ${tr('každé rozhodnutí o soukromí má čtyři strany. Co vás změna stojí, co vám přinese, co vás stojí, když nic nezměníte, a co vám současný stav dává. Většina lidí počítá jen první, a proto se nikdy nerozhodne. Aplikace vás provede všemi čtyřmi a ukáže, kde vaše odhady rozhodují.','every privacy decision has four sides: what the change costs, what it brings, what changing nothing costs, and what the status quo gives you. Most people only count the first, so they never decide. This app walks you through all four and shows where your estimates matter.')}</div>
+      ${secWhy(a)}${secTitle(a)}
+      <div><h3>${tr('Nebo začněte příkladem','Or start from an example')}</h3><p class="lead small">${tr('Příklady mají předvyplněné odhady. Upravte je podle sebe, vaše situace je jiná.','Examples come with pre-filled estimates. Adjust them, your situation is different.')}</p></div>
+      ${secTemplates(a)}</section>`;
+  if(s===1) body = `<section class="panel stack"><h2>${tr('Co chráníte a před kým','What you protect and from whom')}</h2>${secGoal(a)}</section><section class="panel">${secAssets(a)}</section><section class="panel">${secAdv(a)}</section>`;
+  if(s===2) body = `<section class="panel stack"><h2>${tr('Mezi čím vybíráte','What you’re choosing between')}</h2>
+      <p class="lead">${tr('První možnost je ','The first option is the ')}${g('status',tr('výchozí stav','status quo'))}${tr(': nic neměnit. Druhá je změna, o které uvažujete. Přidat můžete i mezicestu.',': change nothing. The second is the change you’re considering. You can add a middle path too.')}</p>${secOptions(a)}</section>`;
+  if(s===3) body = `<section class="panel stack"><h2>${tr('Náklady a přínosy','Costs and benefits')}</h2>
+      <p class="lead">${tr('U každé položky zvolte, jak je velká a jak pravděpodobná. Tři tečky přidají podrobnosti: jestli se opakuje, jak je vratná a co chrání. Šedé návrhy přidáte kliknutím.','For each item pick size and likelihood. The three dots add details: ongoing or one-off, reversibility, and what it protects. Click grey suggestions to add them.')}</p>
+      <div class="meter" id="live-meter"></div><p class="small muted">${esc(L(MAG_HINT))}</p></section>${quadrants(a,false)}`;
+  if(s===4) body = `<section class="panel stack"><h2>${tr('Kontrola předsudků','Bias check')}</h2>
+      <p class="lead">${tr('Mentální blok funguje oběma směry: když se nám nechce, vidíme jen argumenty proti. Když nás baví ladit, nevidíme náklady. Odpovězte upřímně.','Mental blocks run both ways: when we don’t want to, we only see arguments against; when tinkering is fun, we don’t see the costs. Answer honestly.')}</p></section>
+      <section class="panel">${secTP(a)}</section>${secBiases(a)}`;
+  if(s===5) body = `<section class="panel stack"><h2>${tr('Výsledek','Result')}</h2><div id="results"></div></section>`;
+  return `<div class="guide">
+    <nav class="steps" aria-label="${tr('Kroky','Steps')}">${STEPS.map((n,i)=>`<button type="button" data-act="step" data-v="${i}" ${i===s?'aria-current="step"':''} class="${i<s?'done':''}"><span class="n">${i+1}</span>${L(n)}</button>`).join('')}</nav>
+    ${a.why==='safety' && s<5 ? `<div class="safety small"><b>${tr('Jste v ohrožení?','Are you in danger?')}</b> ${tr('Volejte 112 / 158. Pomoc obětem: ČR 116 006, SK 0800 212 212. Aplikace nenahradí odbornou pomoc.','Call 112 (EU) or 911 (US). Victim support: US 1-800-799-7233, UK 0808 2000 247. This app is no substitute for professional help.')}</div>`:''}
+    ${body}
+    <div class="navbar">
+      ${s>0?`<button class="btn" type="button" data-act="step" data-v="${s-1}">← ${tr('Zpět','Back')}</button>`:'<span></span>'}
+      <span class="privacy-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>${tr('Vše zůstává ve vašem prohlížeči.','Everything stays in your browser.')}</span>
+      ${s<5?`<button class="btn primary" type="button" data-act="step" data-v="${s+1}">${tr('Další: ','Next: ')}${L(STEPS[s+1])} →</button>`:`<button class="btn" type="button" data-act="mode" data-v="expert">${tr('Otevřít v expertním režimu','Open in expert mode')}</button>`}
+    </div></div>`;
+}
+function renderExpert(a){
+  return `<div class="expert-grid expert"><div>
+      <section class="panel sec"><h2>${tr('Zadání','Brief')} <span class="k">${tr('rozhodnutí · důvod · cíl · rozsah','decision · reason · goal · scope')}</span></h2>${secTitle(a)}${secWhy(a)}${secGoal(a)}
+        <details><summary>${tr('Načíst šablonu','Load a template')}</summary>${secTemplates(a)}</details></section>
+      <section class="panel sec"><h2>${tr('Model hrozeb','Threat model')} <span class="k">${tr('aktiva · protivníci','assets · adversaries')}</span></h2><div class="grid2"><div>${secAssets(a)}</div><div>${secAdv(a)}</div></div></section>
+      <section class="panel sec"><h2>${tr('Možnosti','Options')} <span class="k">${a.options.length}</span></h2>${secOptions(a)}</section>
+      <section class="sec"><h2>${tr('Položky','Items')} <span class="k">${a.items.length} · ${tr('velikost · pravděpodobnost % · trvání · vratnost · aktivum','magnitude · probability % · duration · reversibility · asset')}</span></h2>${quadrants(a,true)}</section>
+      <section class="panel sec"><h2>${tr('Kontrola předsudků','Bias check')}</h2>${secBiases(a)}</section>
+      <section class="panel sec"><h2>${tr('Váhy a simulace','Weights and simulation')}</h2>${secTP(a)}${secWeights(a)}</section>
+      <section class="panel sec"><h2>${tr('Poznámky','Notes')}</h2><textarea data-meta="notes" aria-label="${tr('Poznámky','Notes')}" placeholder="${tr('Předpoklady, zdroje, co ověřit, kdy analýzu zopakovat','Assumptions, sources, what to verify, when to redo this')}">${esc(a.notes)}</textarea></section>
+    </div><aside><section class="panel"><div id="results"></div></section></aside></div>`;
+}
+function chrome(){
+  document.documentElement.lang = LANG;
+  document.title = tr('Bilance soukromí','Privacy Balance');
+  document.getElementById('app-name').textContent = tr('Bilance soukromí','Privacy Balance');
+  document.getElementById('m-guide').textContent = tr('Průvodce','Guide');
+  document.getElementById('m-expert').textContent = 'Expert';
+  document.getElementById('b-list').textContent = tr('Moje analýzy','My analyses');
+  document.getElementById('install-btn').textContent = tr('Nainstalovat','Install');
+  [['l-cs','cs'],['l-en','en']].forEach(([id,v])=>document.getElementById(id).setAttribute('aria-pressed', LANG===v));
+  document.getElementById('m-guide').setAttribute('aria-pressed', state.mode==='guide');
+  document.getElementById('m-expert').setAttribute('aria-pressed', state.mode==='expert');
+}
+function render(){
+  const a = cur(); chrome();
+  document.getElementById('main').innerHTML = state.mode==='expert' ? renderExpert(a) : renderGuide(a);
+  live();
+}
+function live(){
+  const a = cur(); a.updated = Date.now(); const R = compute(a);
+  const res = document.getElementById('results'); if(res) res.innerHTML = renderResults(a,R);
+  const m = document.getElementById('live-meter');
+  if(m){
+    if(!a.items.length) m.innerHTML = `<span class="muted">${tr('Průběžný stav se ukáže po přidání první položky.','A live tally appears after the first item.')}</span>`;
+    else { const c = R.comps.slice().sort((x,y)=>y.net-x.net)[0]; const tot=c.pro+c.con||1; const v=verdict(c.margin);
+      m.innerHTML = `<b>${tr('Průběžně:','Live:')}</b> <span class="num" style="color:var(--pro)">${tr('pro','for')} ${f1(c.pro)}</span><div class="track" aria-hidden="true"><div class="fill" style="width:${(c.pro/tot*100).toFixed(1)}%"></div></div><span class="num" style="color:var(--con)">${tr('proti','against')} ${f1(c.con)}</span><span class="pill ${v.cls}">${v.short}</span>`; }
+  }
+  a.options.forEach(o=>['cost','benefit'].forEach(k=>{ const el=document.querySelector(`[data-sum="${o.id}-${k}"]`); if(el) el.textContent = f1(sumOf(a,o,k))+' '+tr('b.','pts'); }));
+  a.items.forEach(it=>{ const el=document.querySelector(`[data-val="${it.id}"]`); if(el) el.textContent = f1(itemValue(a,it))+' '+tr('b.','pts'); });
+  document.getElementById('cur-title').textContent = a.title || tr('Bez názvu','Untitled');
+  save();
+}
+
+/* ================= EXPORT ================= */
+function toMarkdown(a){
+  const R = compute(a); const Lx=[]; const d = new Date().toLocaleDateString(LANG==='cs'?'cs-CZ':'en-GB');
+  Lx.push(`# ${a.title||tr('Analýza soukromí','Privacy analysis')}`, '', `*${tr('Bilance soukromí','Privacy Balance')}, ${d}*`, '');
+  const why = WHY.find(w=>w[0]===a.why); if(why) Lx.push(`**${tr('Důvod','Reason')}:** ${L(why[1])}  `);
+  Lx.push(`**${tr('Cíl','Goal')}:** ${a.goal==='anonymity'?tr('anonymita','anonymity'):a.goal==='privacy'?tr('soukromí','privacy'):tr('nerozhodnuto','undecided')}  `, `**${tr('Rozsah','Scope')}:** ${a.scope==='activity'?tr('konkrétní činnost: ','specific activity: ')+(a.activity||'–'):tr('celkově','overall')}  `, `**${tr('Cílený protivník','Targeted')}:** ${{no:tr('ne','no'),maybe:tr('možná','maybe'),yes:tr('ano','yes')}[a.targeted]||'–'}`, '');
+  const as = ASSETS.filter(s=>a.assets[s[0]]!==undefined);
+  if(as.length){ Lx.push(`## ${tr('Co chráním','What I protect')}`,''); as.forEach(s=>Lx.push(`- ${L(s[1])}: ${L(LVL[a.assets[s[0]]])}`)); Lx.push(''); }
+  if(a.adv.length){ Lx.push(`## ${tr('Před kým','From whom')}`,''); ADV.filter(x=>a.adv.includes(x[0])).forEach(x=>Lx.push(`- ${L(x[3])} (${L(CAP[x[1]])})`)); Lx.push(''); }
+  Lx.push(`## ${tr('Náklady a přínosy','Costs and benefits')}`,'');
+  const base = sq(a); [...a.options.filter(o=>o!==base), base].forEach(o=>['cost','benefit'].forEach(k=>{
+    const its = a.items.filter(it=>it.o===o.id&&it.k===k); Lx.push(`### ${qLabel(a,o,k)} (${f1(sumOf(a,o,k))})`,'');
+    if(!its.length){ Lx.push(`_${tr('nic','none')}_`,''); return; }
+    Lx.push(tr('| Položka | Velikost | Pravděp. | Trvání | Vratnost | Chrání | Body |','| Item | Size | Prob. | Duration | Reversibility | Protects | Points |'),'|---|---|---|---|---|---|---|');
+    its.forEach(it=>Lx.push(`| ${(it.t||'').replace(/\|/g,'/')}${it.note?' ('+it.note.replace(/\|/g,'/')+')':''} | ${it.m} ${L(MAG[it.m])} | ${it.p} % | ${it.d==='once'?tr('jednorázové','one-off'):tr('opakuje se','ongoing')} | ${L(REV[it.rev]||REV.rotate)} | ${assetLabel(it.asset)||'–'} | ${f1(itemValue(a,it))} |`));
+    Lx.push('');
+  }));
+  Lx.push(`## ${tr('Výsledek','Result')}`,'', tr('| Možnost | Náklady | Přínosy | Saldo | Simulace |','| Option | Costs | Benefits | Net | Simulation |'),'|---|---|---|---|---|');
+  a.options.forEach(o=>{const t=R.t[o.id]; Lx.push(`| ${o.name}${o.sq?tr(' (dnes)',' (today)'):''} | ${f1(t.cost)} | ${f1(t.benefit)} | ${f1(t.benefit-t.cost)} | ${R.wins[o.id]!==undefined?pct(R.wins[o.id]):'–'} |`);});
+  Lx.push(''); R.comps.forEach(c=>Lx.push(`- **${c.o.name}**: ${tr('pro','for')} ${f1(c.pro)}, ${tr('proti','against')} ${f1(c.con)} → ${verdict(c.margin,!a.items.length).v}`));
+  const ins = insights(a,R); if(ins.length){ Lx.push('',`## ${tr('Na co myslet','Things to consider')}`,''); ins.forEach(i=>Lx.push(`- **${i.h}.** ${i.t}`)); }
+  if(a.notes) Lx.push('',`## ${tr('Poznámky','Notes')}`,'',a.notes);
+  Lx.push('','---',tr(`Váhy: opakování ×${a.settings.wOngoing}, stárnoucí ×${a.settings.wAging}, trvalé ×${a.settings.wPerm}. Body jsou pomůcka k přemýšlení, ne objektivní pravda.`,`Weights: ongoing ×${a.settings.wOngoing}, ageing ×${a.settings.wAging}, permanent ×${a.settings.wPerm}. Points are a thinking aid, not objective truth.`));
+  return Lx.join('\n');
+}
+function slug(s){ return (s||'analyza').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,50)||'analyza'; }
+async function download(name, text, mime){
+  try{ if(window.claude && typeof window.claude.use==='function'){ const d = await window.claude.use('downloads');
+      if(d){ try{ await d.save({filename:name, data:text}); toast(tr('Soubor uložen','File saved')); }catch(e){ toast(tr('Uložení se nepovedlo nebo bylo zrušeno. Použijte Kopírovat.','Save failed or was cancelled. Use Copy.')); } return; } } }catch(e){}
+  try{ const b = new Blob([text],{type:mime}); const u = URL.createObjectURL(b); const el = document.createElement('a'); el.href=u; el.download=name; el.rel='noopener'; document.body.appendChild(el); el.click(); el.remove(); setTimeout(()=>URL.revokeObjectURL(u),3000); }catch(e){}
+}
+function inFrame(){ try{ return window.self !== window.top; }catch(e){ return true; } }
+
+/* ================= MODALS ================= */
+function modal(html){ const m=document.getElementById('modal'); document.getElementById('modal-box').innerHTML=html; m.classList.add('on'); const f=m.querySelector('button,input,textarea'); if(f) f.focus(); }
+function closeModal(){ document.getElementById('modal').classList.remove('on'); }
+let confirmCb = null;
+function confirmBox(title, text, okLabel, cb){ confirmCb = cb; modal(`<h2 id="modal-title">${esc(title)}</h2><p>${esc(text)}</p><div class="row"><button class="btn primary" type="button" data-act="confirm-ok">${esc(okLabel)}</button><button class="btn" type="button" data-act="close">${tr('Zrušit','Cancel')}</button></div>`); }
+function exportBox(title, filename, text, mime){
+  window._exp = {filename, text, mime};
+  modal(`<h2 id="modal-title">${esc(title)}</h2><textarea id="exp-text" readonly aria-label="${tr('Obsah exportu','Export content')}">${esc(text)}</textarea>
+    <div class="row"><button class="btn primary" type="button" data-act="copy">${tr('Kopírovat','Copy')}</button><button class="btn" type="button" data-act="dl">${tr('Stáhnout soubor','Download file')}</button><button class="btn ghost" type="button" data-act="close">${tr('Zavřít','Close')}</button></div>
+    <p class="small muted">${tr('Pokud se stahování nespustí, použijte Kopírovat a vložte text do souboru nebo poznámek.','If the download doesn’t start, use Copy and paste into a file or notes.')}</p>`);
+}
+function listBox(){
+  const items = state.analyses.slice().sort((x,y)=>y.updated-x.updated);
+  modal(`<h2 id="modal-title">${tr('Moje analýzy','My analyses')}</h2>
+    <div class="alist">${items.map(a=>`<div class="a ${a.id===state.cur?'cur':''}"><div class="grow"><b>${esc(a.title||tr('Bez názvu','Untitled'))}</b><span class="small muted">${a.items.length} ${tr('položek','items')} · ${new Date(a.updated).toLocaleDateString(LANG==='cs'?'cs-CZ':'en-GB')}</span></div>
+      <button class="btn sm" type="button" data-act="open" data-id="${a.id}">${tr('Otevřít','Open')}</button>
+      <button class="btn sm ghost" type="button" data-act="dup" data-id="${a.id}">${tr('Kopie','Copy')}</button>
+      ${state.analyses.length>1?`<button class="btn sm ghost danger" type="button" data-act="del-an" data-id="${a.id}">${tr('Smazat','Delete')}</button>`:''}</div>`).join('')}</div>
+    <div class="row"><button class="btn primary" type="button" data-act="new">${tr('+ Nová analýza','+ New analysis')}</button><button class="btn" type="button" data-act="import">${tr('Načíst ze zálohy','Restore from backup')}</button><button class="btn" type="button" data-act="export-all">${tr('Zálohovat vše','Back up all')}</button><button class="btn ghost" type="button" data-act="close">${tr('Zavřít','Close')}</button></div>
+    <p class="small muted">${tr('Analýzy jsou uložené jen v tomto prohlížeči. Při vymazání dat prohlížeče zmizí, proto si je zálohujte.','Analyses live only in this browser. Clearing browser data removes them, so back them up.')}</p>`);
+}
+function importBox(){
+  modal(`<h2 id="modal-title">${tr('Načíst ze zálohy','Restore from backup')}</h2>
+    <label class="f" for="imp-file">${tr('Soubor .json','.json file')}</label><input id="imp-file" type="file" accept="application/json,.json">
+    <label class="f" for="imp-text">${tr('nebo vložte obsah zálohy','or paste the backup content')}</label><textarea id="imp-text" placeholder='{"app":"bilance-soukromi", …}'></textarea>
+    <p class="small" id="imp-err" style="color:var(--con)"></p>
+    <div class="row"><button class="btn primary" type="button" data-act="do-import">${tr('Načíst','Restore')}</button><button class="btn ghost" type="button" data-act="close">${tr('Zrušit','Cancel')}</button></div>`);
+  document.getElementById('imp-file').addEventListener('change', e=>{ const f=e.target.files[0]; if(f) f.text().then(t=>{ document.getElementById('imp-text').value=t; }); });
+}
+function doImport(){
+  const txt = document.getElementById('imp-text').value.trim(); const err = document.getElementById('imp-err');
+  try{ const j = JSON.parse(txt); const list = j.analyses || (j.analysis ? [j.analysis] : null);
+    if(!list || !list.length) throw new Error(tr('V záloze není žádná analýza.','No analysis in the backup.'));
+    let last=null;
+    list.forEach(a=>{ if(!Array.isArray(a.options)||!Array.isArray(a.items)) throw new Error(tr('Záloha nemá očekávaný tvar.','Unexpected backup format.'));
+      const n = migrate({...a, id:uid(), step:a.step||0, updated:Date.now()}); state.analyses.push(n); last=n; });
+    state.cur = last.id; closeModal(); render(); toast(tr('Načteno: ','Restored: ')+list.length);
+  }catch(e){ err.textContent = tr('Nepodařilo se načíst: ','Could not restore: ')+(e.message||'JSON')+' '+tr('Zkontrolujte, že jste vložili celý obsah souboru.','Check you pasted the whole file.'); }
+}
+function aboutBox(){
+  modal(`<h2 id="modal-title">${tr('O aplikaci','About')}</h2>
+    <p>${tr('Bilance soukromí vám pomůže rozhodnout, jestli se vám vyplatí nějaké opatření pro soukromí nebo anonymitu. Nikomu neříká, co dělat. Ukáže, co vás to bude stát, co vám to dá, a kde vaše odhady rozhodují.','Privacy Balance helps you decide whether a privacy or anonymity measure is worth it. It doesn’t tell you what to do. It shows what it costs, what it gives, and where your estimates matter.')}</p>
+    <p><b>${tr('Vaše data:','Your data:')}</b> ${tr('aplikace nic neodesílá, nemá server, analytiku ani externí písma. Vše je v prohlížeči tohoto zařízení.','the app sends nothing; no server, analytics or external fonts. Everything stays in this browser.')}</p>
+    <p><b>${tr('Instalace:','Install:')}</b> ${tr('Android (Chrome, Vanadium): menu → Nainstalovat aplikaci. iPhone (Safari): Sdílet → Přidat na plochu. Po instalaci funguje offline. V náhledu uvnitř claude.ai instalace nejde, je potřeba verze na vlastní adrese.','Android (Chrome, Vanadium): menu → Install app. iPhone (Safari): Share → Add to Home Screen. Works offline once installed. Not installable inside the claude.ai preview; host it on your own address.')}</p>
+    <p class="src">${tr('Zdroje rámce a šablon','Sources for the framework and templates')}: Juraj Bednár, ${tr('přednáška o soukromí, anonymitě a cost-benefit analýze (Chain Camp)','talk on privacy, anonymity and cost-benefit analysis (Chain Camp)')}; Max Hillebrand, <i>The Praxeology of Privacy</i>; Michael Bazzell, <i>Extreme Privacy</i> (5th ed.), <i>Extreme Privacy: Mobile Devices</i>, <i>Linux Devices</i>, <i>VPNs and Firewalls</i>.</p>
+    <h3>${tr('Slovníček','Glossary')}</h3>
+    <div class="stack small">${Object.values(GLOSS).map(v=>`<div><b>${esc(L(v[0]))}.</b> ${esc(L(v[1]))}</div>`).join('')}</div>
+    <div class="row"><button class="btn primary" type="button" data-act="close">${tr('Zavřít','Close')}</button></div>`);
+}
+function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('on'),2200); }
+
+/* ================= EVENTS ================= */
+function addItem(oid,k,text){
+  const a=cur(); a.items.push({id:uid(), o:oid, k, t:text||'', m:3, p:100, d:'ongoing', rev:'rotate', asset:'', note:''}); render();
+  const add=document.getElementById(`add-${oid}-${k}`); if(add) add.focus();
+}
+function applyTemplate(key){
+  const t = TEMPLATES.find(t=>t.key===key); const a = cur();
+  const go = ()=>{ const n = fromTemplate(t); n.id=a.id; n.created=a.created; n.why=a.why; n.step = state.mode==='guide' ? 1 : 0;
+    state.analyses[state.analyses.findIndex(x=>x.id===a.id)] = n; openItems.clear(); render(); window.scrollTo(0,0); };
+  if(a.items.length) confirmBox(tr('Nahradit obsah?','Replace content?'), tr('Šablona „','Template “')+L(t.title)+tr('“ nahradí položky v aktuální analýze. Chcete-li zachovat obě, nejdřív vytvořte novou analýzu v „Moje analýzy“.','” will replace the items in this analysis. To keep both, create a new analysis in “My analyses” first.'), tr('Nahradit','Replace'), go);
+  else go();
+}
+document.addEventListener('click', e=>{
+  const b = e.target.closest('[data-act]'); if(!b){ if(e.target.id==='modal') closeModal(); return; }
+  const act = b.dataset.act; const a = cur();
+  if(b.type==='checkbox' && act!=='adv') return;
+  switch(act){
+    case 'lang': state.lang = LANG = b.dataset.v; render(); break;
+    case 'mode': state.mode=b.dataset.v; render(); window.scrollTo(0,0); break;
+    case 'step': a.step=+b.dataset.v; render(); window.scrollTo(0,0); break;
+    case 'tpl': applyTemplate(b.dataset.k); break;
+    case 'tp': a.settings.wOngoing = +b.dataset.v; render(); break;
+    case 'asset': { const k=b.dataset.k, v=+b.dataset.v; if(a.assets[k]===v) delete a.assets[k]; else a.assets[k]=v; render(); break; }
+    case 'adv': { const k=b.dataset.k; a.adv = b.checked ? [...new Set([...a.adv,k])] : a.adv.filter(x=>x!==k); live(); break; }
+    case 'bias': { const k=b.dataset.k, v=b.dataset.v; if(a.biases[k]===v) delete a.biases[k]; else a.biases[k]=v; render(); break; }
+    case 'add': { const inp=document.getElementById(`add-${b.dataset.o}-${b.dataset.k}`); addItem(b.dataset.o,b.dataset.k,inp?inp.value.trim():''); break; }
+    case 'insp': { const c=inspFor(a.options.find(o=>o.id===b.dataset.o),b.dataset.k)[+b.dataset.i]; a.items.push({id:uid(),o:b.dataset.o,k:b.dataset.k,t:L(c[0]),m:c[1]||3,p:c[4]||100,d:c[2]||'ongoing',rev:c[3]||'rotate',asset:'',note:''}); render(); break; }
+    case 'more': { const row=b.closest('.item'); row.classList.toggle('open'); openItems[row.classList.contains('open')?'add':'delete'](row.dataset.id); break; }
+    case 'del-item': { const id=b.closest('.item').dataset.id; a.items=a.items.filter(i=>i.id!==id); render(); break; }
+    case 'add-opt': a.options.push({id:uid(), name:tr('Mezicesta','Middle path'), sq:false}); render(); break;
+    case 'del-opt': { const o=b.dataset.o; const op=a.options.find(x=>x.id===o); const n=a.items.filter(i=>i.o===o).length;
+      const go=()=>{ a.options=a.options.filter(x=>x.id!==o); a.items=a.items.filter(i=>i.o!==o); if(!a.options.some(x=>x.sq)) a.options[0].sq=true; render(); };
+      if(n) confirmBox(tr('Smazat možnost?','Delete option?'), op.name+tr(': smaže se i ',': this also deletes ')+n+tr(' položek.',' items.'), tr('Smazat','Delete'), go); else go(); break; }
+    case 'set-sq': a.options.forEach(o=>o.sq = o.id===b.dataset.o); render(); break;
+    case 'gloss': { const v=GLOSS[b.dataset.k]; modal(`<h2 id="modal-title">${esc(L(v[0]))}</h2><p>${esc(L(v[1]))}</p><div class="row"><button class="btn primary" type="button" data-act="close">${tr('Rozumím','Got it')}</button></div>`); break; }
+    case 'list': listBox(); break;
+    case 'about': aboutBox(); break;
+    case 'close': closeModal(); break;
+    case 'confirm-ok': closeModal(); if(confirmCb) confirmCb(); confirmCb=null; break;
+    case 'open': state.cur=b.dataset.id; closeModal(); render(); break;
+    case 'dup': { const src=state.analyses.find(x=>x.id===b.dataset.id); const n=JSON.parse(JSON.stringify(src)); n.id=uid(); n.title=(src.title||'')+tr(' (kopie)',' (copy)'); n.updated=Date.now(); state.analyses.push(n); state.cur=n.id; closeModal(); render(); toast(tr('Vytvořena kopie','Copy created')); break; }
+    case 'del-an': { const id=b.dataset.id; const t=state.analyses.find(x=>x.id===id); confirmBox(tr('Smazat analýzu?','Delete analysis?'), (t.title||tr('Bez názvu','Untitled'))+tr(' bude z tohoto prohlížeče smazána. Nejde to vrátit.',' will be deleted from this browser. This can’t be undone.'), tr('Smazat','Delete'), ()=>{ state.analyses=state.analyses.filter(x=>x.id!==id); if(state.cur===id) state.cur=state.analyses[0].id; render(); listBox(); }); break; }
+    case 'new': { const n=blankAnalysis(); n.title=tr('Nová analýza','New analysis'); state.analyses.push(n); state.cur=n.id; closeModal(); render(); window.scrollTo(0,0); break; }
+    case 'import': importBox(); break;
+    case 'do-import': doImport(); break;
+    case 'export-md': exportBox(tr('Zpráva v Markdownu','Markdown report'), slug(a.title)+'.md', toMarkdown(a), 'text/markdown'); break;
+    case 'export-json': exportBox(tr('Záloha analýzy','Analysis backup'), slug(a.title)+'.json', JSON.stringify({app:'bilance-soukromi', v:2, exported:new Date().toISOString(), analysis:a}, null, 2), 'application/json'); break;
+    case 'export-all': exportBox(tr('Záloha všech analýz','Backup of all analyses'), 'bilance-soukromi-'+new Date().toISOString().slice(0,10)+'.json', JSON.stringify({app:'bilance-soukromi', v:2, exported:new Date().toISOString(), analyses:state.analyses}, null, 2), 'application/json'); break;
+    case 'copy': { const t=document.getElementById('exp-text'); const done=()=>toast(tr('Zkopírováno','Copied'));
+      try{ navigator.clipboard.writeText(window._exp.text).then(done).catch(()=>{ t.select(); try{document.execCommand('copy'); done();}catch(e){ toast(tr('Označte text a zkopírujte ručně','Select the text and copy manually')); } }); }catch(e){ t.select(); } break; }
+    case 'dl': download(window._exp.filename, window._exp.text, window._exp.mime); break;
+    case 'print': try{ window.print(); }catch(e){} break;
+    case 'install': if(window._dip){ window._dip.prompt(); window._dip=null; b.hidden=true; } break;
+  }
+});
+document.addEventListener('input', e=>{
+  const el = e.target; const a = cur();
+  if(el.dataset.meta){ if(el.type==='radio') return; a[el.dataset.meta]=el.value; live(); return; }
+  if(el.dataset.opt){ const o=a.options.find(x=>x.id===el.dataset.opt); if(o){ o.name=el.value; live(); } return; }
+  if(el.dataset.set){ if(el.type==='checkbox') return; const v=parseFloat(el.value); if(!isNaN(v)){ a.settings[el.dataset.set]=v; live(); } return; }
+  const row = el.closest('.item'); if(row && el.dataset.f){
+    const it = a.items.find(i=>i.id===row.dataset.id); if(!it) return; const f=el.dataset.f;
+    if(f==='m') it.m=+el.value; else if(f==='p') it.p=Math.max(0,Math.min(100,+el.value||0)); else it[f]=el.value;
+    live();
+  }
+});
+document.addEventListener('change', e=>{
+  const el = e.target; const a = cur();
+  if(el.dataset.meta && el.type==='radio'){ a[el.dataset.meta]=el.value; render(); return; }
+  if(el.dataset.set && el.type==='checkbox'){ a.settings[el.dataset.set]=el.checked; live(); }
+});
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape') closeModal();
+  const el=e.target; if(e.key==='Enter' && el.dataset && el.dataset.add){ e.preventDefault(); const [o,k]=el.dataset.add.split('|'); addItem(o,k,el.value.trim()); }
+});
+const flush=()=>{ clearTimeout(saveTimer); try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} };
+window.addEventListener('pagehide', flush);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flush(); });
+window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); window._dip=e; document.getElementById('install-btn').hidden=false; });
+if('serviceWorker' in navigator && !inFrame() && location.protocol!=='file:'){ try{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }catch(e){} }
+render();
+</script>
+</body>
+</html>
