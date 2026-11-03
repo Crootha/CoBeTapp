@@ -790,9 +790,6 @@ const pct = x => Math.round(x*100)+(LANG==='cs'?' %':'%');
 function insights(a, R){
   const out = []; const base = R.base; const t = R.t; const q = s => '„'+s+'“';
   const qq = s => LANG==='cs' ? '„'+s+'“' : '“'+s+'”';
-  if(a.why==='safety') out.push({c:'bad', h:tr('Bezpečí na prvním místě','Safety first'), t:tr(
-    'Pokud vám někdo konkrétní ubližuje nebo vás pronásleduje, řešte nejdřív bezpečí: policie (158 / 112) a pomoc obětem: v ČR Linka pomoci obětem kriminality a domácího násilí 116 006, na Slovensku 0800 212 212. Technická opatření přijdou potom. Jedna nedbalost (fotka od známého, společná akce, platba) může prozradit vše.',
-    'If someone specific is hurting or stalking you, deal with safety first: police (112 in the EU, 911 in the US) and victim-support services (e.g. US National DV Hotline 1-800-799-7233, UK 0808 2000 247). Technical measures come after. One slip (a friend’s photo, a shared event, a payment) can expose everything.')});
   const missing = [];
   a.options.forEach(o=>['cost','benefit'].forEach(k=>{ if(!a.items.some(it=>it.o===o.id&&it.k===k)) missing.push(qLabel(a,o,k)); }));
   if(a.items.length && missing.length) out.push({c:'warn', h:tr('Prázdné pole','Empty quadrant'), t:tr('Nevyplněno: ','Missing: ')+missing.map(qq).join(', ')+tr('. Bez nich je výsledek zkreslený. Nejčastěji lidé zapomenou na náklady toho, že nic nezmění.','. Without them the result is skewed. People most often forget the costs of changing nothing.')});
@@ -1026,7 +1023,6 @@ function renderGuide(a){
   if(s===5) body = `<section class="panel stack"><h2>${tr('Výsledek','Result')}</h2><div id="results"></div></section>`;
   return `<div class="guide">
     <nav class="steps" aria-label="${tr('Kroky','Steps')}">${STEPS.map((n,i)=>`<button type="button" data-act="step" data-v="${i}" ${i===s?'aria-current="step"':''} class="${i<s?'done':''}"><span class="n">${i+1}</span>${L(n)}</button>`).join('')}</nav>
-    ${a.why==='safety' && s<5 ? `<div class="safety small"><b>${tr('Jste v ohrožení?','Are you in danger?')}</b> ${tr('Volejte 112 / 158. Pomoc obětem: ČR 116 006, SK 0800 212 212. Aplikace nenahradí odbornou pomoc.','Call 112 (EU) or 911 (US). Victim support: US 1-800-799-7233, UK 0808 2000 247. This app is no substitute for professional help.')}</div>`:''}
     ${body}
     <div class="navbar">
       ${s>0?`<button class="btn" type="button" data-act="step" data-v="${s-1}">← ${tr('Zpět','Back')}</button>`:'<span></span>'}

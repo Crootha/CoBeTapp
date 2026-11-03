@@ -27,7 +27,7 @@ Aplikace je statická: žádný build, žádný `package.json`, žádný server.
 1. **`index.html` není v kořeni.** Nahraný ZIP nebo podsložka (např. `bilance-soukromi-pwa/index.html`) vede k chybě 404. Soubory rozbalte do kořene repozitáře, nebo ve Vercelu nastavte *Root Directory* na tu podsložku.
 2. **Špatně rozpoznaný framework.** Když Vercel nastaví *Framework Preset* na Vite, Next.js apod. nebo *Output Directory* na `dist`/`public`, hledá výstup buildu, který neexistuje („No Output Directory named … found“). U projektu bez frameworku („Other“) Vercel navíc dává přednost složce `public`, pokud existuje. Řešení: *Framework Preset* **Other**, *Build Command* a *Output Directory* nechte prázdné (bez override). Přiložený `vercel.json` nastavuje `"framework": null`.
 3. **Ochrana nasazení.** Preview URL (`…-git-…vercel.app`) jsou ve výchozím stavu za přihlášením do Vercelu. Otevřete produkční doménu, nebo vypněte *Settings → Deployment Protection → Vercel Authentication*.
-4. **Stará verze z cache.** Service worker drží starou verzi. Po každé změně `index.html` zvyšte `CACHE` v `sw.js` (`bilance-v4` → `bilance-v5`) a stránku dvakrát obnovte.
+4. **Stará verze z cache.** Service worker drží starou verzi. Po každé změně `index.html` zvyšte `CACHE` v `sw.js` (`bilance-v5` → `bilance-v6`) a stránku dvakrát obnovte.
 
 **CZ – postup přes GitHub:**
 1. Nahrajte všechny soubory do kořene nového repozitáře na GitHubu.
