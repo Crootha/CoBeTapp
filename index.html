@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<!-- Bilance soukromí / Privacy Balance · SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- CoBeTapp (Cost-Benefit App) · SPDX-License-Identifier: GPL-3.0-or-later -->
 <html lang="cs">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
-<meta name="description" content="Cost-benefit analýza soukromí a anonymity. Pro nováčky i profesionály. Funguje offline, nic neodesílá.">
+<meta name="description" content="CoBeTapp: Cost-benefit analýza soukromí a anonymity. Pro nováčky i profesionály. Funguje offline, nic neodesílá.">
 <meta name="theme-color" content="#F2F3EF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0F1312" media="(prefers-color-scheme: dark)">
-<title>Bilance soukromí</title>
+<title>CoBeTapp</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -54,7 +54,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 
 /* top bar */
-.top{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.top{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
 .top-in{max-width:1240px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .brand{display:flex;gap:10px;align-items:center;font-weight:700;letter-spacing:-.01em}
 .brand svg{flex:none}
@@ -73,7 +73,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .iconbtn{border:1px solid transparent;background:transparent;border-radius:6px;cursor:pointer;width:30px;height:30px;display:inline-grid;place-items:center;color:var(--muted);flex:none}
 .iconbtn:hover{background:var(--soft);color:var(--ink)}
 
-main{max-width:1240px;margin:0 auto;padding:20px 16px 80px}
+main{max-width:1240px;margin:0 auto;padding:20px max(16px,env(safe-area-inset-right)) 80px max(16px,env(safe-area-inset-left))}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px}
 .privacy-note{display:flex;gap:8px;align-items:center;font-size:.85rem;color:var(--muted)}
 
@@ -250,6 +250,63 @@ details[open] summary{margin-bottom:8px}
 .tp button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .safety{border:2px solid var(--con);background:var(--con-soft);border-radius:var(--r);padding:12px 14px}
 .src{font-size:.8rem;color:var(--muted)}
+
+/* ---------- responsive ---------- */
+.fab{display:none}
+@media (pointer:coarse){ .iconbtn{width:40px;height:40px} .lvl button,.bias .ans button,.chip{padding:7px 12px} }
+@media (max-width:980px){
+  .expert-grid ~ .fab, .fab.on{display:inline-flex;position:fixed;right:14px;bottom:16px;z-index:30;gap:6px;align-items:center;border:0;border-radius:999px;padding:11px 16px;background:var(--accent);color:var(--accent-ink);font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer}
+}
+@media (max-width:700px){
+  body{font-size:15px}
+  .top{position:static}
+  .top-in{padding:8px 12px;gap:8px}
+  .brand{flex:1 1 100%}
+  .cur{display:none}
+  .top-in .spacer{display:none}
+  .top-in .seg button{padding:5px 9px}
+  .top-in .btn{padding:6px 10px}
+  main{padding:12px 12px 24px}
+  .panel{padding:14px}
+  h2{font-size:1.25rem}
+  .steps{flex-wrap:nowrap;overflow-x:auto;margin:0 -12px 12px;padding:2px 12px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch;position:sticky;top:0;z-index:15;background:var(--bg)}
+  .steps::-webkit-scrollbar{display:none}
+  .steps button{flex:none}
+  .steps button:not([aria-current]) .lbl{display:none}
+  .steps button:not([aria-current]){padding:5px 6px}
+  .navbar{position:sticky;bottom:0;z-index:15;background:var(--bg);margin:0 -12px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+  .navbar .privacy-note{display:none}
+  .navbar .btn{flex:1 1 0;text-align:center;padding:10px 12px}
+  .guide{gap:12px}
+  input[type=text],input[type=number],select,textarea{font-size:16px}
+  .item{padding:8px}
+  .item .t{flex:1 1 100%}
+  .item select{flex:1 1 40%}
+  .item .adv select,.item .adv .note{flex:1 1 100%}
+  .qhead{padding:10px 12px}
+  .qbody{padding:8px}
+  .addrow input{font-size:16px}
+  .tpl-grid{grid-template-columns:1fr 1fr;gap:8px}
+  .tpl{padding:10px}
+  .why{grid-template-columns:1fr}
+  .assets .asset{padding:10px}
+  .lvl{gap:4px}
+  .lvl button{flex:1 1 auto}
+  .drivers{grid-template-columns:1fr}
+  .bar{grid-template-columns:1fr 7em}
+  table{font-size:.82rem}
+  th,td{padding:6px 5px}
+  .modal{padding:0;place-items:end stretch}
+  .modal .box{max-width:none;max-height:92%;border-radius:14px 14px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+  .modal .box .row .btn{flex:1 1 auto}
+  .alist .a{flex-wrap:wrap}
+  .alist .a .grow{flex:1 1 100%}
+  .expert-grid{gap:12px}
+  .sec + .sec{margin-top:12px}
+  .weights{grid-template-columns:1fr}
+}
+@media (max-width:380px){ .tpl-grid{grid-template-columns:1fr} .top-in .btn#b-list{font-size:.85rem} }
+@media print{ .fab{display:none!important} }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media print{
   .top,.steps,.navbar,.no-print,.addrow,.chips,.iconbtn{display:none!important}
@@ -264,7 +321,7 @@ details[open] summary{margin-bottom:8px}
   <div class="top-in">
     <div class="brand">
       <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="currentColor"/><path d="M14 22h36" stroke="var(--bg)" stroke-width="4" stroke-linecap="round"/><path d="M32 14v36" stroke="var(--bg)" stroke-width="4" stroke-linecap="round"/><rect x="12" y="30" width="12" height="18" rx="2" fill="var(--pro)"/><rect x="40" y="38" width="12" height="10" rx="2" fill="var(--con)"/></svg>
-      <span id="app-name">Bilance soukromí</span>
+      <span id="app-name">CoBeTapp</span>
     </div>
     <span class="cur" id="cur-title"></span>
     <span class="spacer"></span>
@@ -1022,7 +1079,7 @@ function renderGuide(a){
       <section class="panel">${secTP(a)}</section>${secBiases(a)}`;
   if(s===5) body = `<section class="panel stack"><h2>${tr('Výsledek','Result')}</h2><div id="results"></div></section>`;
   return `<div class="guide">
-    <nav class="steps" aria-label="${tr('Kroky','Steps')}">${STEPS.map((n,i)=>`<button type="button" data-act="step" data-v="${i}" ${i===s?'aria-current="step"':''} class="${i<s?'done':''}"><span class="n">${i+1}</span>${L(n)}</button>`).join('')}</nav>
+    <nav class="steps" aria-label="${tr('Kroky','Steps')}">${STEPS.map((n,i)=>`<button type="button" data-act="step" data-v="${i}" ${i===s?'aria-current="step"':''} class="${i<s?'done':''}"><span class="n">${i+1}</span><span class="lbl">${L(n)}</span></button>`).join('')}</nav>
     ${body}
     <div class="navbar">
       ${s>0?`<button class="btn" type="button" data-act="step" data-v="${s-1}">← ${tr('Zpět','Back')}</button>`:'<span></span>'}
@@ -1040,7 +1097,8 @@ function renderExpert(a){
       <section class="panel sec"><h2>${tr('Kontrola předsudků','Bias check')}</h2>${secBiases(a)}</section>
       <section class="panel sec"><h2>${tr('Váhy a simulace','Weights and simulation')}</h2>${secTP(a)}${secWeights(a)}</section>
       <section class="panel sec"><h2>${tr('Poznámky','Notes')}</h2><textarea data-meta="notes" aria-label="${tr('Poznámky','Notes')}" placeholder="${tr('Předpoklady, zdroje, co ověřit, kdy analýzu zopakovat','Assumptions, sources, what to verify, when to redo this')}">${esc(a.notes)}</textarea></section>
-    </div><aside><section class="panel"><div id="results"></div></section></aside></div>`;
+    </div><aside><section class="panel" id="results-panel"><div id="results"></div></section></aside></div>
+    <button type="button" class="fab no-print" data-act="to-results">${tr('Výsledek','Result')} <span class="num" id="fab-v"></span> ↓</button>`;
 }
 const HOST_THEME = document.documentElement.hasAttribute('data-theme-self') ? null : document.documentElement.getAttribute('data-theme');
 const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
@@ -1056,8 +1114,8 @@ if(mq){ try{ mq.addEventListener('change', ()=>{ if((state.theme||'auto')==='aut
 function chrome(){
   applyTheme();
   document.documentElement.lang = LANG;
-  document.title = tr('Bilance soukromí','Privacy Balance');
-  document.getElementById('app-name').textContent = tr('Bilance soukromí','Privacy Balance');
+  document.title = 'CoBeTapp';
+  document.getElementById('app-name').textContent = 'CoBeTapp';
   document.getElementById('m-guide').textContent = tr('Průvodce','Guide');
   document.getElementById('m-expert').textContent = 'Expert';
   document.getElementById('b-list').textContent = tr('Moje analýzy','My analyses');
@@ -1069,6 +1127,7 @@ function chrome(){
 function render(){
   const a = cur(); chrome();
   document.getElementById('main').innerHTML = state.mode==='expert' ? renderExpert(a) : renderGuide(a);
+  const nav=document.querySelector('.steps'), st=nav && nav.querySelector('[aria-current="step"]'); if(st && nav.scrollWidth>nav.clientWidth) nav.scrollLeft = st.offsetLeft - (nav.clientWidth - st.offsetWidth)/2;
   live();
 }
 function live(){
@@ -1082,6 +1141,7 @@ function live(){
   }
   a.options.forEach(o=>['cost','benefit'].forEach(k=>{ const el=document.querySelector(`[data-sum="${o.id}-${k}"]`); if(el) el.textContent = f1(sumOf(a,o,k))+' '+tr('b.','pts'); }));
   a.items.forEach(it=>{ const el=document.querySelector(`[data-val="${it.id}"]`); if(el) el.textContent = f1(itemValue(a,it))+' '+tr('b.','pts'); });
+  const fv=document.getElementById('fab-v'); if(fv){ const c=R.comps.slice().sort((x,y)=>y.net-x.net)[0]; fv.textContent = c && a.items.length ? verdict(c.margin).short : ''; }
   document.getElementById('cur-title').textContent = a.title || tr('Bez názvu','Untitled');
   save();
 }
@@ -1089,7 +1149,7 @@ function live(){
 /* ================= EXPORT ================= */
 function toMarkdown(a){
   const R = compute(a); const Lx=[]; const d = new Date().toLocaleDateString(LANG==='cs'?'cs-CZ':'en-GB');
-  Lx.push(`# ${a.title||tr('Analýza soukromí','Privacy analysis')}`, '', `*${tr('Bilance soukromí','Privacy Balance')}, ${d}*`, '');
+  Lx.push(`# ${a.title||tr('Analýza soukromí','Privacy analysis')}`, '', `*CoBeTapp, ${d}*`, '');
   const why = WHY.find(w=>w[0]===a.why); if(why) Lx.push(`**${tr('Důvod','Reason')}:** ${L(why[1])}  `);
   Lx.push(`**${tr('Cíl','Goal')}:** ${a.goal==='anonymity'?tr('anonymita','anonymity'):a.goal==='privacy'?tr('soukromí','privacy'):tr('nerozhodnuto','undecided')}  `, `**${tr('Rozsah','Scope')}:** ${a.scope==='activity'?tr('konkrétní činnost: ','specific activity: ')+(a.activity||'–'):tr('celkově','overall')}  `, `**${tr('Cílený protivník','Targeted')}:** ${{no:tr('ne','no'),maybe:tr('možná','maybe'),yes:tr('ano','yes')}[a.targeted]||'–'}`, '');
   const as = ASSETS.filter(s=>a.assets[s[0]]!==undefined);
@@ -1160,7 +1220,7 @@ function doImport(){
 }
 function aboutBox(){
   modal(`<h2 id="modal-title">${tr('O aplikaci','About')}</h2>
-    <p>${tr('Bilance soukromí vám pomůže rozhodnout, jestli se vám vyplatí nějaké opatření pro soukromí nebo anonymitu. Nikomu neříká, co dělat. Ukáže, co vás to bude stát, co vám to dá, a kde vaše odhady rozhodují.','Privacy Balance helps you decide whether a privacy or anonymity measure is worth it. It doesn’t tell you what to do. It shows what it costs, what it gives, and where your estimates matter.')}</p>
+    <p>${tr('CoBeTapp (Cost-Benefit App) vám pomůže rozhodnout, jestli se vám vyplatí nějaké opatření pro soukromí nebo anonymitu. Nikomu neříká, co dělat. Ukáže, co vás to bude stát, co vám to dá, a kde vaše odhady rozhodují.','CoBeTapp (Cost-Benefit App) helps you decide whether a privacy or anonymity measure is worth it. It doesn’t tell you what to do. It shows what it costs, what it gives, and where your estimates matter.')}</p>
     <p><b>${tr('Vaše data:','Your data:')}</b> ${tr('aplikace nic neodesílá, nemá server, analytiku ani externí písma. Vše je v prohlížeči tohoto zařízení.','the app sends nothing; no server, analytics or external fonts. Everything stays in this browser.')}</p>
     <p><b>${tr('Instalace:','Install:')}</b> ${tr('Android (Chrome, Vanadium): menu → Nainstalovat aplikaci. iPhone (Safari): Sdílet → Přidat na plochu. Po instalaci funguje offline. V náhledu uvnitř claude.ai instalace nejde, je potřeba verze na vlastní adrese.','Android (Chrome, Vanadium): menu → Install app. iPhone (Safari): Share → Add to Home Screen. Works offline once installed. Not installable inside the claude.ai preview; host it on your own address.')}</p>
     <p class="src">${tr('Zdroje rámce a šablon','Sources for the framework and templates')}: Juraj Bednár, ${tr('přednáška o soukromí, anonymitě a cost-benefit analýze (Chain Camp)','talk on privacy, anonymity and cost-benefit analysis (Chain Camp)')}; Max Hillebrand, <i>The Praxeology of Privacy</i>; Michael Bazzell, <i>Extreme Privacy</i> (5th ed.), <i>Extreme Privacy: Mobile Devices</i>, <i>Linux Devices</i>, <i>VPNs and Firewalls</i>.</p>
@@ -1217,13 +1277,14 @@ document.addEventListener('click', e=>{
     case 'new': { const n=blankAnalysis(); n.title=tr('Nová analýza','New analysis'); state.analyses.push(n); state.cur=n.id; closeModal(); render(); window.scrollTo(0,0); break; }
     case 'import': importBox(); break;
     case 'do-import': doImport(); break;
-    case 'export-md': exportBox(tr('Zpráva v Markdownu','Markdown report'), slug(a.title)+'.md', toMarkdown(a), 'text/markdown'); break;
-    case 'export-json': exportBox(tr('Záloha analýzy','Analysis backup'), slug(a.title)+'.json', JSON.stringify({app:'bilance-soukromi', v:2, exported:new Date().toISOString(), analysis:a}, null, 2), 'application/json'); break;
-    case 'export-all': exportBox(tr('Záloha všech analýz','Backup of all analyses'), 'bilance-soukromi-'+new Date().toISOString().slice(0,10)+'.json', JSON.stringify({app:'bilance-soukromi', v:2, exported:new Date().toISOString(), analyses:state.analyses}, null, 2), 'application/json'); break;
+    case 'export-md': exportBox(tr('Zpráva v Markdownu','Markdown report'), 'cobetapp-'+slug(a.title)+'.md', toMarkdown(a), 'text/markdown'); break;
+    case 'export-json': exportBox(tr('Záloha analýzy','Analysis backup'), 'cobetapp-'+slug(a.title)+'.json', JSON.stringify({app:'bilance-soukromi', v:2, exported:new Date().toISOString(), analysis:a}, null, 2), 'application/json'); break;
+    case 'export-all': exportBox(tr('Záloha všech analýz','Backup of all analyses'), 'cobetapp-'+new Date().toISOString().slice(0,10)+'.json', JSON.stringify({app:'bilance-soukromi', v:2, exported:new Date().toISOString(), analyses:state.analyses}, null, 2), 'application/json'); break;
     case 'copy': { const t=document.getElementById('exp-text'); const done=()=>toast(tr('Zkopírováno','Copied'));
       try{ navigator.clipboard.writeText(window._exp.text).then(done).catch(()=>{ t.select(); try{document.execCommand('copy'); done();}catch(e){ toast(tr('Označte text a zkopírujte ručně','Select the text and copy manually')); } }); }catch(e){ t.select(); } break; }
     case 'dl': download(window._exp.filename, window._exp.text, window._exp.mime); break;
     case 'print': try{ window.print(); }catch(e){} break;
+    case 'to-results': { const r=document.getElementById('results-panel'); if(r) r.scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth', block:'start'}); break; }
     case 'install': if(window._dip){ window._dip.prompt(); window._dip=null; b.hidden=true; } break;
   }
 });
